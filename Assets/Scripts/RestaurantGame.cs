@@ -47,6 +47,8 @@ public sealed class RestaurantGame : MonoBehaviour
     private int spending;
     private int wastedFood;
     private int reputation = MaxReputation;
+    private int streak;
+    private int bestStreak;
     private bool finished;
     private HazardSystem hazards;
     private int dayStartNetRevenue;
@@ -111,7 +113,7 @@ public sealed class RestaurantGame : MonoBehaviour
         if (orderTimer <= 0f)
         {
             CreateOrder();
-            orderTimer = orderInterval * orderIntervalMultiplier;
+            orderTimer = Difficulty.OrderInterval(orderInterval, day) * orderIntervalMultiplier;
         }
 
         bool queueChanged = false;
@@ -127,6 +129,7 @@ public sealed class RestaurantGame : MonoBehaviour
             if (order.remainingTime <= 0f)
             {
                 failedOrders++;
+                streak = 0;
                 ChangeReputation(-8);
                 SendCustomerHome(order);
                 activeOrders.RemoveAt(index);
@@ -216,7 +219,9 @@ public sealed class RestaurantGame : MonoBehaviour
             text.AppendLine($"미끄러짐 {hazards.SlipCount}회   화재 {hazards.FireCount}회");
         }
 
+        text.AppendLine($"최고 콤보 {bestStreak}연속   평판 {reputation}/{MaxReputation}");
         text.AppendLine($"업그레이드 지출  ₩{spending:N0}");
+        text.AppendLine($"내일 단가 배율   x{Difficulty.PriceMultiplier(day + 1):0.0}");
         text.AppendLine();
         text.AppendLine($"누적 매출        ₩{revenue:N0} / ₩{TargetRevenue:N0}  ({progress:0.00}%)");
         text.AppendLine();
@@ -258,6 +263,7 @@ public sealed class RestaurantGame : MonoBehaviour
             wastedFood = wastedFood,
             spending = spending,
             reputation = reputation,
+            bestStreak = bestStreak,
             upgradeLevels = upgrades != null ? upgrades.ExportLevels() : System.Array.Empty<int>()
         };
 
@@ -282,6 +288,7 @@ public sealed class RestaurantGame : MonoBehaviour
         wastedFood = data.wastedFood;
         spending = data.spending;
         reputation = data.reputation > 0 ? data.reputation : MaxReputation;
+        bestStreak = data.bestStreak;
         if (upgrades != null)
         {
             upgrades.ImportLevels(data.upgradeLevels);
@@ -490,7 +497,10 @@ public sealed class RestaurantGame : MonoBehaviour
 
     public void ReportDeliveryComplete(DeliveryOrder order)
     {
-        int payout = order.recipe.price + Mathf.RoundToInt(order.DeliveryFee * deliveryFeeMultiplier);
+        streak++;
+        bestStreak = Mathf.Max(bestStreak, streak);
+        int payout = Mathf.RoundToInt((order.recipe.price + order.DeliveryFee * deliveryFeeMultiplier)
+                                      * Difficulty.PriceMultiplier(day) * Difficulty.ComboMultiplier(streak));
         revenue += payout;
         successfulOrders++;
         ChangeReputation(+2);
@@ -501,6 +511,7 @@ public sealed class RestaurantGame : MonoBehaviour
     public void ReportDeliveryMissed(DeliveryOrder order)
     {
         failedOrders++;
+        streak = 0;
         ChangeReputation(-5);
         ShowMessage($"배달 주문 취소! {order.address}");
     }
@@ -727,7 +738,10 @@ public sealed class RestaurantGame : MonoBehaviour
         }
 
         int bonus = Mathf.RoundToInt(Mathf.Clamp(order.remainingTime, 0f, OrderPatience) * 100f);
-        int payout = order.recipe.price + bonus;
+        streak++;
+        bestStreak = Mathf.Max(bestStreak, streak);
+        float multiplier = Difficulty.PriceMultiplier(day) * Difficulty.ComboMultiplier(streak);
+        int payout = Mathf.RoundToInt((order.recipe.price + bonus) * multiplier);
         revenue += payout;
         successfulOrders++;
         ChangeReputation(+3);
@@ -776,7 +790,7 @@ public sealed class RestaurantGame : MonoBehaviour
         Destroy(customerObject.GetComponent<Collider>());
         Customer customer = customerObject.AddComponent<Customer>();
         customer.Initialise(DoorPoint, QueueSlot(activeOrders.Count), ExitPoint, recipe.packagedColor);
-        activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer, OrderPatience * patienceMultiplier));
+        activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer, Difficulty.Patience(OrderPatience, day) * patienceMultiplier));
         PlaySound(GameSound.OrderIn);
         ShowMessage($"주문 #{totalOrders} {recipe.displayName} 들어왔습니다!");
     }
@@ -854,7 +868,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
         if (statsLabel != null)
         {
-            statsLabel.text = $"평판 {reputation}/{MaxReputation}   주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}" + (delivery != null ? $"  배달 {delivery.CompletedDeliveries}" : string.Empty);
+            statsLabel.text = $"평판 {reputation}/{MaxReputation}   콤보 x{Difficulty.ComboMultiplier(streak):0.0}   주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}" + (delivery != null ? $"  배달 {delivery.CompletedDeliveries}" : string.Empty);
         }
     }
 }

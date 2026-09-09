@@ -75,7 +75,7 @@ public sealed class DeliverySystem : MonoBehaviour
         if (requestTimer <= 0f)
         {
             CreateRequest();
-            requestTimer = RequestInterval;
+            requestTimer = Difficulty.DeliveryInterval(RequestInterval, game.Day);
         }
 
         for (int index = pending.Count - 1; index >= 0; index--)
