@@ -10,6 +10,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         BuildLighting();
         BuildShop();
         GameObject player = BuildPlayer();
+        BuildLocalCoopPlayer();
         BuildCamera();
         GameObject gameObject = new GameObject("Restaurant Game");
         RestaurantGame game = gameObject.AddComponent<RestaurantGame>();
@@ -67,6 +68,21 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         cameraObject.AddComponent<FollowPlayerCamera>();
     }
 
+    private void BuildLocalCoopPlayer()
+    {
+        GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        player.name = "Local Player 2";
+        player.transform.position = new Vector3(1.8f, 1.2f, -1f);
+        player.transform.localScale = new Vector3(0.8f, 1.2f, 0.8f);
+        Destroy(player.GetComponent<Collider>());
+        CharacterController controller = player.AddComponent<CharacterController>();
+        controller.height = 2f;
+        controller.radius = 0.4f;
+        player.AddComponent<LocalCoopPlayerController>();
+        player.AddComponent<PlayerInteraction>();
+        player.GetComponent<Renderer>().material.color = new Color(0.25f, 0.65f, 1f);
+    }
+
     private void BuildHud(RestaurantGame game)
     {
         GameObject canvasObject = new GameObject("HUD");
@@ -78,7 +94,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         Text revenue = CreateLabel(canvasObject.transform, "REVENUE  ₩0 / ₩10,000,000", new Vector2(24f, -24f), 26);
         Text day = CreateLabel(canvasObject.transform, "DAY 1   600s", new Vector2(-24f, -24f), 26);
         Text orders = CreateLabel(canvasObject.transform, "주문을 기다리는 중...", new Vector2(24f, -70f), 20);
-        Text instructions = CreateLabel(canvasObject.transform, "WASD 이동   E 상호작용\n냉장고 → 튀김기 → 포장대 → 계산대", new Vector2(24f, 24f), 18);
+        Text instructions = CreateLabel(canvasObject.transform, "P1 WASD + E   P2 IJKL + E\n냉장고 → 튀김기 → 포장대 → 계산대", new Vector2(24f, 24f), 18);
         Text message = CreateLabel(canvasObject.transform, string.Empty, new Vector2(0f, 90f), 24);
         Text stats = CreateLabel(canvasObject.transform, "주문 0  성공 0  실패 0  탄 치킨 0", new Vector2(-24f, -100f), 16);
         revenue.rectTransform.anchorMin = new Vector2(0f, 1f);
