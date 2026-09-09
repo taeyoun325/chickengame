@@ -3,6 +3,8 @@ using UnityEngine.InputSystem;
 
 public sealed class PlayerInteraction : MonoBehaviour
 {
+    private static readonly Key[] ShopKeys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5 };
+
     private Transform holdPoint;
     private FoodItem heldFood;
 
@@ -31,6 +33,30 @@ public sealed class PlayerInteraction : MonoBehaviour
         if (Keyboard.current.qKey.wasPressedThisFrame)
         {
             SwitchSauce();
+        }
+
+        CheckUpgradeShopKeys();
+    }
+
+    /// <summary>업그레이드 스테이션 앞에서만 숫자 키가 구매로 이어진다.</summary>
+    private void CheckUpgradeShopKeys()
+    {
+        Station station = null;
+        for (int slot = 0; slot < ShopKeys.Length; slot++)
+        {
+            if (!Keyboard.current[ShopKeys[slot]].wasPressedThisFrame)
+            {
+                continue;
+            }
+
+            station ??= FindNearbyStation();
+            if (station == null || station.stationType != StationType.Upgrade || RestaurantGame.Instance == null)
+            {
+                return;
+            }
+
+            RestaurantGame.Instance.BuyUpgrade(slot);
+            return;
         }
     }
 

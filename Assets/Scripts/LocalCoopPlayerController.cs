@@ -39,7 +39,7 @@ public sealed class LocalCoopPlayerController : MonoBehaviour
         }
 
         verticalVelocity += -20f * Time.deltaTime;
-        Vector3 velocity = movement * moveSpeed;
+        Vector3 velocity = movement * GameTuning.MoveSpeed(moveSpeed);
         velocity.y = verticalVelocity;
         characterController.Move(velocity * Time.deltaTime);
     }

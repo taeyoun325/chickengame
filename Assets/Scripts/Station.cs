@@ -7,7 +7,8 @@ public enum StationType
     Sauce,
     Packing,
     Checkout,
-    Delivery
+    Delivery,
+    Upgrade
 }
 
 public sealed class Station : MonoBehaviour

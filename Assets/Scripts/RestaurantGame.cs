@@ -28,10 +28,9 @@ public sealed class RestaurantGame : MonoBehaviour
 
     public const int TargetRevenue = 10_000_000;
     private const float DayLength = 600f;
-    private const float OrderInterval = 12f;
+    private const float BaseOrderInterval = 12f;
     private const float OrderPatience = 45f;
-    private const float FryTime = 5f;
-    private const float BurnTime = 8f;
+    private const float BaseFryTime = 5f;
     private const int MaxWaitingOrders = 5;
     private static readonly Vector3 DoorPoint = new Vector3(0f, 0.9f, -8f);
     private static readonly Vector3 ExitPoint = new Vector3(0f, 0.9f, -10f);
@@ -43,6 +42,7 @@ public sealed class RestaurantGame : MonoBehaviour
     private int successfulOrders;
     private int failedOrders;
     private int burntChicken;
+    private int spending;
     private float dayTimer;
     private float orderTimer = 3f;
     private float messageTimer;
@@ -53,7 +53,13 @@ public sealed class RestaurantGame : MonoBehaviour
     private Text messageLabel;
     private Text statsLabel;
     private Text deliveryLabel;
+    private Text upgradeLabel;
     private DeliverySystem delivery;
+    private UpgradeSystem upgrades;
+    private readonly List<GameObject> reserveFryers = new List<GameObject>();
+    private float fryTime = BaseFryTime;
+    private float burnTime = BaseFryTime * 1.6f;
+    private float orderInterval = BaseOrderInterval;
 
     public int Day => day;
     public int Revenue => revenue;
@@ -61,6 +67,7 @@ public sealed class RestaurantGame : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        GameTuning.Reset();
     }
 
     public void SetPlayer(GameObject playerObject)
@@ -87,7 +94,7 @@ public sealed class RestaurantGame : MonoBehaviour
         if (orderTimer <= 0f)
         {
             CreateOrder();
-            orderTimer = OrderInterval;
+            orderTimer = orderInterval;
         }
 
         bool queueChanged = false;
@@ -152,6 +159,9 @@ public sealed class RestaurantGame : MonoBehaviour
             case StationType.Delivery:
                 HandOverDelivery(actor);
                 break;
+            case StationType.Upgrade:
+                ShowMessage("1~5 키로 업그레이드를 구매하세요");
+                break;
         }
     }
 
@@ -159,6 +169,64 @@ public sealed class RestaurantGame : MonoBehaviour
     {
         delivery = system;
         deliveryLabel = deliveryText;
+    }
+
+    public void ConnectUpgrades(UpgradeSystem system, Text upgradeText)
+    {
+        upgrades = system;
+        upgradeLabel = upgradeText;
+        ApplyUpgrades();
+    }
+
+    /// <summary>증설 업그레이드로 열리는 예비 튀김기는 처음에는 꺼져 있다.</summary>
+    public void RegisterReserveFryer(GameObject fryer)
+    {
+        reserveFryers.Add(fryer);
+        fryer.SetActive(false);
+    }
+
+    public bool TrySpend(int amount)
+    {
+        if (revenue < amount)
+        {
+            return false;
+        }
+
+        revenue -= amount;
+        spending += amount;
+        return true;
+    }
+
+    /// <summary>구매한 업그레이드 레벨을 실제 게임 값에 반영한다.</summary>
+    public void ApplyUpgrades()
+    {
+        if (upgrades == null)
+        {
+            return;
+        }
+
+        fryTime = BaseFryTime * Mathf.Pow(0.88f, upgrades.LevelOf(UpgradeKind.FryerSpeed));
+        burnTime = fryTime * 1.6f;
+        orderInterval = BaseOrderInterval * Mathf.Pow(0.9f, upgrades.LevelOf(UpgradeKind.Marketing));
+        GameTuning.PlayerSpeedMultiplier = Mathf.Pow(1.12f, upgrades.LevelOf(UpgradeKind.MoveSpeed));
+        GameTuning.DeliverySpeedMultiplier = Mathf.Pow(0.85f, upgrades.LevelOf(UpgradeKind.ScooterSpeed));
+
+        int extraFryers = upgrades.LevelOf(UpgradeKind.ExtraFryer);
+        for (int index = 0; index < reserveFryers.Count; index++)
+        {
+            if (reserveFryers[index] != null)
+            {
+                reserveFryers[index].SetActive(index < extraFryers);
+            }
+        }
+    }
+
+    public void BuyUpgrade(int slot)
+    {
+        if (upgrades != null)
+        {
+            upgrades.TryPurchase(slot);
+        }
     }
 
     private void HandOverDelivery(PlayerInteraction actor)
@@ -219,14 +287,14 @@ public sealed class RestaurantGame : MonoBehaviour
         }
 
         food.cookProgress += deltaTime;
-        if (food.cookProgress >= BurnTime && !food.burnCounted)
+        if (food.cookProgress >= burnTime && !food.burnCounted)
         {
             food.burnCounted = true;
             burntChicken++;
             food.SetState(FoodState.Burnt);
             ShowMessage("치킨이 탔습니다!");
         }
-        else if (food.cookProgress >= FryTime && food.state == FoodState.Frying)
+        else if (food.cookProgress >= fryTime && food.state == FoodState.Frying)
         {
             food.SetState(FoodState.Cooked);
             ShowMessage("치킨이 익었습니다! 튀김기에서 꺼내세요");
@@ -264,7 +332,7 @@ public sealed class RestaurantGame : MonoBehaviour
             FoodItem chicken = actor.ReleaseHeldFood(station.transform);
             chicken.SetState(FoodState.Frying);
             chicken.cookProgress = 0f;
-            ShowMessage($"튀김 시작! {FryTime:0}초 뒤 꺼내세요");
+            ShowMessage($"튀김 시작! {fryTime:0.0}초 뒤 꺼내세요");
             return;
         }
 
@@ -452,6 +520,11 @@ public sealed class RestaurantGame : MonoBehaviour
 
                 ordersLabel.text = text.ToString();
             }
+        }
+
+        if (upgradeLabel != null && upgrades != null)
+        {
+            upgradeLabel.text = upgrades.BuildShopText();
         }
 
         if (deliveryLabel != null && delivery != null)

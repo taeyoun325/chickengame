@@ -15,7 +15,17 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         game.SetPlayer(player);
         DeliverySystem delivery = gameObject.AddComponent<DeliverySystem>();
         delivery.Initialise(game, BuildScooter().transform);
-        BuildHud(game, delivery);
+        UpgradeSystem upgradeSystem = gameObject.AddComponent<UpgradeSystem>();
+        upgradeSystem.Initialise(game);
+        RegisterReserveFryers(game);
+        BuildHud(game, delivery, upgradeSystem);
+    }
+
+    /// <summary>증설로 열리는 2, 3번 튀김기를 미리 만들어 두고 꺼둔다.</summary>
+    private void RegisterReserveFryers(RestaurantGame game)
+    {
+        game.RegisterReserveFryer(CreateStation("Fryer 2", StationType.Fryer, new Vector3(-4f, 0.8f, 5f), new Vector3(3f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)).gameObject);
+        game.RegisterReserveFryer(CreateStation("Fryer 3", StationType.Fryer, new Vector3(0f, 0.8f, 5f), new Vector3(3f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)).gameObject);
     }
 
     private GameObject BuildScooter()
@@ -49,6 +59,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateStation("Sauce Table", StationType.Sauce, new Vector3(-7f, 0.8f, 0f), new Vector3(1.6f, 1.6f, 3f), new Color(0.75f, 0.2f, 0.3f));
         CreateStation("Packing Counter", StationType.Packing, new Vector3(0f, 0.8f, 3.5f), new Vector3(3f, 1.6f, 1.5f), new Color(0.95f, 0.75f, 0.25f));
         CreateStation("Checkout", StationType.Checkout, new Vector3(4f, 0.8f, -2.5f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.25f, 0.65f, 0.35f));
+        CreateStation("Upgrade Desk", StationType.Upgrade, new Vector3(8f, 0.8f, 4.5f), new Vector3(1.5f, 1.6f, 2.5f), new Color(0.55f, 0.35f, 0.8f));
         CreateStation("Delivery Counter", StationType.Delivery, new Vector3(-4f, 0.8f, -2.5f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.15f, 0.45f, 0.85f));
         CreateBlock("Customer Queue", new Vector3(0f, 0.2f, -4f), new Vector3(5f, 0.4f, 0.5f), new Color(0.9f, 0.25f, 0.25f));
     }
@@ -95,7 +106,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         player.GetComponent<Renderer>().material.color = new Color(0.25f, 0.65f, 1f);
     }
 
-    private void BuildHud(RestaurantGame game, DeliverySystem delivery)
+    private void BuildHud(RestaurantGame game, DeliverySystem delivery, UpgradeSystem upgradeSystem)
     {
         GameObject canvasObject = new GameObject("HUD");
         Canvas canvas = canvasObject.AddComponent<Canvas>();
@@ -128,8 +139,16 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         deliveryStatus.rectTransform.pivot = new Vector2(1f, 1f);
         deliveryStatus.alignment = TextAnchor.UpperRight;
 
+        Text upgradeShop = CreateLabel(canvasObject.transform, string.Empty, new Vector2(-24f, 24f), 15);
+        upgradeShop.rectTransform.anchorMin = new Vector2(1f, 0f);
+        upgradeShop.rectTransform.anchorMax = new Vector2(1f, 0f);
+        upgradeShop.rectTransform.pivot = new Vector2(1f, 0f);
+        upgradeShop.rectTransform.sizeDelta = new Vector2(520f, 130f);
+        upgradeShop.alignment = TextAnchor.LowerRight;
+
         game.ConnectHud(revenue, day, orders, message, stats);
         game.ConnectDelivery(delivery, deliveryStatus);
+        game.ConnectUpgrades(upgradeSystem, upgradeShop);
     }
 
     private static Text CreateLabel(Transform parent, string text, Vector2 position, int fontSize)

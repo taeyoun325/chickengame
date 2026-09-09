@@ -32,7 +32,7 @@ public sealed class PlayerController : MonoBehaviour
         }
 
         verticalVelocity += gravity * Time.deltaTime;
-        Vector3 velocity = movement * moveSpeed;
+        Vector3 velocity = movement * GameTuning.MoveSpeed(moveSpeed);
         velocity.y = verticalVelocity;
         characterController.Move(velocity * Time.deltaTime);
     }

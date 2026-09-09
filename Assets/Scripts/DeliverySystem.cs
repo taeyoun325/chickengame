@@ -143,7 +143,7 @@ public sealed class DeliverySystem : MonoBehaviour
     {
         pending.Remove(order);
         order.dispatched = true;
-        order.rideTimer = order.RideTime;
+        order.rideTimer = order.RideTime * GameTuning.DeliverySpeedMultiplier;
         riding.Add(order);
     }
 
