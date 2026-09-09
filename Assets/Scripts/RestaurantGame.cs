@@ -46,10 +46,16 @@ public sealed class RestaurantGame : MonoBehaviour
     private int spending;
     private int wastedFood;
     private HazardSystem hazards;
+    private GameObject settlementPanel;
+    private Text settlementText;
+    private bool settlementOpen;
+    private int dayStartNetRevenue;
+    private int dayStartOrders;
+    private int dayStartSuccess;
+    private int dayStartFailed;
     private float dayTimer;
     private float orderTimer = 3f;
     private float messageTimer;
-    private GameObject player;
     private Text revenueLabel;
     private Text dayLabel;
     private Text ordersLabel;
@@ -77,11 +83,7 @@ public sealed class RestaurantGame : MonoBehaviour
     {
         Instance = this;
         GameTuning.Reset();
-    }
-
-    public void SetPlayer(GameObject playerObject)
-    {
-        player = playerObject;
+        Time.timeScale = 1f;
     }
 
     public void ConnectHud(Text revenueText, Text dayText, Text ordersText, Text messageText, Text statsText)
@@ -96,6 +98,17 @@ public sealed class RestaurantGame : MonoBehaviour
 
     private void Update()
     {
+        if (settlementOpen)
+        {
+            if (UnityEngine.InputSystem.Keyboard.current != null &&
+                UnityEngine.InputSystem.Keyboard.current.spaceKey.wasPressedThisFrame)
+            {
+                StartNextDay();
+            }
+
+            return;
+        }
+
         dayTimer += Time.deltaTime;
         orderTimer -= Time.deltaTime;
         messageTimer -= Time.deltaTime;
@@ -133,9 +146,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
         if (dayTimer >= DayLength)
         {
-            dayTimer -= DayLength;
-            day++;
-            ShowMessage($"DAY {day} 시작!");
+            EndDay();
         }
 
         if (messageTimer <= 0f && messageLabel != null)
@@ -183,6 +194,124 @@ public sealed class RestaurantGame : MonoBehaviour
     public void ConnectHazards(HazardSystem system)
     {
         hazards = system;
+    }
+
+    public void ConnectSettlement(GameObject panel, Text panelText)
+    {
+        settlementPanel = panel;
+        settlementText = panelText;
+        if (settlementPanel != null)
+        {
+            settlementPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>하루가 끝나면 게임을 멈추고 결산을 보여준 뒤 저장한다.</summary>
+    private void EndDay()
+    {
+        dayTimer = 0f;
+        settlementOpen = true;
+        Time.timeScale = 0f;
+
+        int dayRevenue = revenue + spending - dayStartNetRevenue;
+        int dayOrders = totalOrders - dayStartOrders;
+        int daySuccess = successfulOrders - dayStartSuccess;
+        int dayFailed = failedOrders - dayStartFailed;
+        float progress = revenue / (float)TargetRevenue * 100f;
+
+        StringBuilder text = new StringBuilder();
+        text.AppendLine($"DAY {day} 영업 종료");
+        text.AppendLine();
+        text.AppendLine($"오늘 매출        ₩{dayRevenue:N0}");
+        text.AppendLine($"주문 {dayOrders}건   성공 {daySuccess}   실패 {dayFailed}");
+        text.AppendLine($"탄 치킨 {burntChicken}   버린 음식 {wastedFood}");
+        if (hazards != null)
+        {
+            text.AppendLine($"미끄러짐 {hazards.SlipCount}회   화재 {hazards.FireCount}회");
+        }
+
+        text.AppendLine($"업그레이드 지출  ₩{spending:N0}");
+        text.AppendLine();
+        text.AppendLine($"누적 매출        ₩{revenue:N0} / ₩{TargetRevenue:N0}  ({progress:0.00}%)");
+        text.AppendLine();
+        text.AppendLine("SPACE 를 눌러 다음 DAY 시작");
+
+        if (settlementText != null)
+        {
+            settlementText.text = text.ToString();
+        }
+
+        if (settlementPanel != null)
+        {
+            settlementPanel.SetActive(true);
+        }
+
+        SaveProgress();
+    }
+
+    private void StartNextDay()
+    {
+        settlementOpen = false;
+        Time.timeScale = 1f;
+        if (settlementPanel != null)
+        {
+            settlementPanel.SetActive(false);
+        }
+
+        day++;
+        dayStartNetRevenue = revenue + spending;
+        dayStartOrders = totalOrders;
+        dayStartSuccess = successfulOrders;
+        dayStartFailed = failedOrders;
+        ShowMessage($"DAY {day} 시작!");
+    }
+
+    public void SaveProgress()
+    {
+        SaveData data = new SaveData
+        {
+            day = day,
+            revenue = revenue,
+            totalOrders = totalOrders,
+            successfulOrders = successfulOrders,
+            failedOrders = failedOrders,
+            burntChicken = burntChicken,
+            wastedFood = wastedFood,
+            spending = spending,
+            upgradeLevels = upgrades != null ? upgrades.ExportLevels() : System.Array.Empty<int>()
+        };
+
+        SaveSystem.Save(data);
+    }
+
+    /// <summary>세이브가 있으면 이어서 시작한다.</summary>
+    public void LoadProgress()
+    {
+        SaveData data = SaveSystem.Load();
+        if (data == null)
+        {
+            return;
+        }
+
+        day = Mathf.Max(1, data.day);
+        revenue = data.revenue;
+        totalOrders = data.totalOrders;
+        successfulOrders = data.successfulOrders;
+        failedOrders = data.failedOrders;
+        burntChicken = data.burntChicken;
+        wastedFood = data.wastedFood;
+        spending = data.spending;
+        if (upgrades != null)
+        {
+            upgrades.ImportLevels(data.upgradeLevels);
+            ApplyUpgrades();
+        }
+
+        dayStartNetRevenue = revenue + spending;
+        dayStartOrders = totalOrders;
+        dayStartSuccess = successfulOrders;
+        dayStartFailed = failedOrders;
+        ShowMessage($"DAY {day} 이어하기 (저장 {data.savedAt})");
     }
 
     public bool TryExtinguishNearby(Vector3 position)
@@ -373,6 +502,7 @@ public sealed class RestaurantGame : MonoBehaviour
         }
 
         delivery.Dispatch(order);
+        actor.ClearHeldFood();
         Destroy(food.gameObject);
         ShowMessage($"배달 출발! {order.address} ({Mathf.CeilToInt(order.RideTime)}s)");
     }
@@ -425,7 +555,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
     private void TakeRawChicken(PlayerInteraction actor)
     {
-        if (actor.HeldFood != null)
+        if (!actor.HandsFree)
         {
             ShowMessage("손에 든 물건을 먼저 내려놓으세요");
             return;
@@ -465,7 +595,7 @@ public sealed class RestaurantGame : MonoBehaviour
         }
 
         FoodItem cookedChicken = station.StoredFood;
-        if (actor.HeldFood == null && cookedChicken != null && cookedChicken.state != FoodState.Frying)
+        if (actor.HandsFree && cookedChicken != null && cookedChicken.state != FoodState.Frying)
         {
             actor.SetHeldFood(cookedChicken);
             ShowMessage(cookedChicken.state == FoodState.Burnt ? "탄 치킨입니다. 버리세요" : "튀긴 치킨을 들었습니다");
@@ -557,6 +687,7 @@ public sealed class RestaurantGame : MonoBehaviour
         activeOrders.Remove(order);
         SendCustomerHome(order);
         ReflowQueue();
+        actor.ClearHeldFood();
         Destroy(food.gameObject);
         ShowMessage($"주문 #{order.number} {order.recipe.displayName} 완료! +₩{payout:N0}");
     }

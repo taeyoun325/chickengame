@@ -65,6 +65,11 @@ public sealed class DeliverySystem : MonoBehaviour
 
     private void Update()
     {
+        if (game == null)
+        {
+            return;
+        }
+
         float deltaTime = Time.deltaTime;
         requestTimer -= deltaTime;
         if (requestTimer <= 0f)

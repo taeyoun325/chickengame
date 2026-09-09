@@ -7,12 +7,11 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     {
         BuildLighting();
         BuildShop();
-        GameObject player = BuildPlayer();
+        BuildPlayer();
         BuildLocalCoopPlayer();
         BuildCamera();
         GameObject gameObject = new GameObject("Restaurant Game");
         RestaurantGame game = gameObject.AddComponent<RestaurantGame>();
-        game.SetPlayer(player);
         DeliverySystem delivery = gameObject.AddComponent<DeliverySystem>();
         delivery.Initialise(game, BuildScooter().transform);
         UpgradeSystem upgradeSystem = gameObject.AddComponent<UpgradeSystem>();
@@ -24,13 +23,14 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         hazardSystem.Initialise(game);
         game.ConnectHazards(hazardSystem);
         BuildHud(game, delivery, upgradeSystem, eventSystem);
+        Debug.Log($"Chicken Game ready - DAY {game.Day}, 매출 {game.Revenue}");
     }
 
     /// <summary>증설로 열리는 2, 3번 튀김기를 미리 만들어 두고 꺼둔다.</summary>
     private void RegisterReserveFryers(RestaurantGame game)
     {
-        game.RegisterReserveFryer(CreateStation("Fryer 2", StationType.Fryer, new Vector3(-4f, 0.8f, 5f), new Vector3(3f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)).gameObject);
-        game.RegisterReserveFryer(CreateStation("Fryer 3", StationType.Fryer, new Vector3(0f, 0.8f, 5f), new Vector3(3f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)).gameObject);
+        game.RegisterReserveFryer(CreateStation("Fryer 2", StationType.Fryer, new Vector3(-4f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)).gameObject);
+        game.RegisterReserveFryer(CreateStation("Fryer 3", StationType.Fryer, new Vector3(-1f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)).gameObject);
     }
 
     private GameObject BuildScooter()
@@ -59,16 +59,18 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateBlock("Entrance Path", new Vector3(0f, -0.25f, -8.5f), new Vector3(6f, 0.5f, 5f), new Color(0.3f, 0.28f, 0.26f));
         CreateBlock("Front Wall Left", new Vector3(-5.75f, 2f, -6f), new Vector3(6.5f, 4f, 0.5f), new Color(0.38f, 0.18f, 0.12f));
         CreateBlock("Front Wall Right", new Vector3(5.75f, 2f, -6f), new Vector3(6.5f, 4f, 0.5f), new Color(0.38f, 0.18f, 0.12f));
-        CreateStation("Fryer", StationType.Fryer, new Vector3(-4f, 0.8f, 2.5f), new Vector3(3f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f));
-        CreateStation("Fridge", StationType.Fridge, new Vector3(5f, 1.5f, 3.5f), new Vector3(2f, 3f, 2f), new Color(0.35f, 0.7f, 0.8f));
-        CreateStation("Sauce Table", StationType.Sauce, new Vector3(-7f, 0.8f, 0f), new Vector3(1.6f, 1.6f, 3f), new Color(0.75f, 0.2f, 0.3f));
-        CreateStation("Packing Counter", StationType.Packing, new Vector3(0f, 0.8f, 3.5f), new Vector3(3f, 1.6f, 1.5f), new Color(0.95f, 0.75f, 0.25f));
-        CreateStation("Checkout", StationType.Checkout, new Vector3(4f, 0.8f, -2.5f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.25f, 0.65f, 0.35f));
-        CreateStation("Trash Bin", StationType.Trash, new Vector3(-8f, 0.6f, 3.5f), new Vector3(1.4f, 1.2f, 1.4f), new Color(0.25f, 0.25f, 0.28f));
-        CreateStation("Extinguisher Stand", StationType.Extinguisher, new Vector3(8f, 0.7f, 0f), new Vector3(1f, 1.4f, 1f), new Color(0.8f, 0.15f, 0.15f));
-        CreateStation("Upgrade Desk", StationType.Upgrade, new Vector3(8f, 0.8f, 4.5f), new Vector3(1.5f, 1.6f, 2.5f), new Color(0.55f, 0.35f, 0.8f));
-        CreateStation("Delivery Counter", StationType.Delivery, new Vector3(-4f, 0.8f, -2.5f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.15f, 0.45f, 0.85f));
-        CreateBlock("Customer Queue", new Vector3(0f, 0.2f, -4f), new Vector3(5f, 0.4f, 0.5f), new Color(0.9f, 0.25f, 0.25f));
+        // 조리 라인은 뒷줄, 손님을 상대하는 카운터는 앞줄. 스테이션끼리는 최소 3m 떨어뜨려
+        // 상호작용 반경(2.4m)이 겹치지 않게 한다.
+        CreateStation("Fryer", StationType.Fryer, new Vector3(-7f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f));
+        CreateStation("Sauce Table", StationType.Sauce, new Vector3(2f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.75f, 0.2f, 0.3f));
+        CreateStation("Fridge", StationType.Fridge, new Vector3(5f, 1.5f, 4.2f), new Vector3(2f, 3f, 2f), new Color(0.35f, 0.7f, 0.8f));
+        CreateStation("Upgrade Desk", StationType.Upgrade, new Vector3(8f, 0.8f, 4.2f), new Vector3(1.5f, 1.6f, 2.5f), new Color(0.55f, 0.35f, 0.8f));
+        CreateStation("Packing Counter", StationType.Packing, new Vector3(0f, 0.8f, 0.8f), new Vector3(3f, 1.6f, 1.5f), new Color(0.95f, 0.75f, 0.25f));
+        CreateStation("Trash Bin", StationType.Trash, new Vector3(-7.5f, 0.6f, 0.5f), new Vector3(1.4f, 1.2f, 1.4f), new Color(0.25f, 0.25f, 0.28f));
+        CreateStation("Extinguisher Stand", StationType.Extinguisher, new Vector3(7.5f, 0.7f, 0.5f), new Vector3(1f, 1.4f, 1f), new Color(0.8f, 0.15f, 0.15f));
+        CreateStation("Delivery Counter", StationType.Delivery, new Vector3(-4f, 0.8f, -2.8f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.15f, 0.45f, 0.85f));
+        CreateStation("Checkout", StationType.Checkout, new Vector3(4f, 0.8f, -2.8f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.25f, 0.65f, 0.35f));
+        CreateBlock("Customer Queue", new Vector3(0f, 0.2f, -4.5f), new Vector3(11f, 0.4f, 0.5f), new Color(0.9f, 0.25f, 0.25f));
     }
 
     private GameObject BuildPlayer()
@@ -120,7 +122,10 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         GameObject canvasObject = new GameObject("HUD");
         Canvas canvas = canvasObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvasObject.AddComponent<CanvasScaler>();
+        CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
         canvasObject.AddComponent<GraphicRaycaster>();
 
         Text revenue = CreateLabel(canvasObject.transform, "REVENUE  ₩0 / ₩10,000,000", new Vector2(24f, -24f), 26);
@@ -131,17 +136,27 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         Text stats = CreateLabel(canvasObject.transform, "주문 0  성공 0  실패 0  탄 치킨 0", new Vector2(-24f, -100f), 16);
         revenue.rectTransform.anchorMin = new Vector2(0f, 1f);
         revenue.rectTransform.anchorMax = new Vector2(0f, 1f);
+        revenue.rectTransform.pivot = new Vector2(0f, 1f);
         day.rectTransform.anchorMin = new Vector2(1f, 1f);
         day.rectTransform.anchorMax = new Vector2(1f, 1f);
+        day.rectTransform.pivot = new Vector2(1f, 1f);
+        day.alignment = TextAnchor.UpperRight;
         orders.rectTransform.anchorMin = new Vector2(0f, 1f);
         orders.rectTransform.anchorMax = new Vector2(0f, 1f);
+        orders.rectTransform.pivot = new Vector2(0f, 1f);
+        orders.rectTransform.sizeDelta = new Vector2(420f, 160f);
         instructions.rectTransform.anchorMin = new Vector2(0f, 0f);
         instructions.rectTransform.anchorMax = new Vector2(0f, 0f);
+        instructions.rectTransform.pivot = new Vector2(0f, 0f);
+        instructions.alignment = TextAnchor.LowerLeft;
         message.alignment = TextAnchor.MiddleCenter;
         message.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
         message.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        message.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         stats.rectTransform.anchorMin = new Vector2(1f, 1f);
         stats.rectTransform.anchorMax = new Vector2(1f, 1f);
+        stats.rectTransform.pivot = new Vector2(1f, 1f);
+        stats.alignment = TextAnchor.UpperRight;
         Text deliveryStatus = CreateLabel(canvasObject.transform, "배달 대기 없음", new Vector2(-24f, -140f), 16);
         deliveryStatus.rectTransform.anchorMin = new Vector2(1f, 1f);
         deliveryStatus.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -167,6 +182,33 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
 
         game.ConnectUpgrades(upgradeSystem, upgradeShop);
         game.ConnectEvents(eventSystem, eventBanner);
+        BuildSettlementPanel(canvasObject.transform, game);
+        game.LoadProgress();
+    }
+
+    /// <summary>하루가 끝나면 뜨는 결산 화면.</summary>
+    private static void BuildSettlementPanel(Transform parent, RestaurantGame game)
+    {
+        GameObject panel = new GameObject("Settlement Panel");
+        panel.transform.SetParent(parent, false);
+        Image background = panel.AddComponent<Image>();
+        background.color = new Color(0.05f, 0.04f, 0.03f, 0.92f);
+        RectTransform rect = background.rectTransform;
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(720f, 460f);
+        rect.anchoredPosition = Vector2.zero;
+
+        Text report = CreateLabel(panel.transform, string.Empty, Vector2.zero, 22);
+        report.alignment = TextAnchor.MiddleCenter;
+        report.rectTransform.anchorMin = new Vector2(0f, 0f);
+        report.rectTransform.anchorMax = new Vector2(1f, 1f);
+        report.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        report.rectTransform.offsetMin = new Vector2(32f, 32f);
+        report.rectTransform.offsetMax = new Vector2(-32f, -32f);
+
+        game.ConnectSettlement(panel, report);
     }
 
     private static Text CreateLabel(Transform parent, string text, Vector2 position, int fontSize)

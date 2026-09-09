@@ -4,9 +4,9 @@ public enum GameEventKind
 {
     RushHour,
     AppPromotion,
+    GroupOrder,
     PickyCustomers,
     Blackout,
-    GroupOrder,
     HealthInspection
 }
 

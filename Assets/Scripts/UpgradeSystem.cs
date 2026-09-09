@@ -112,6 +112,30 @@ public sealed class UpgradeSystem : MonoBehaviour
         game.ShowMessage($"{upgrade.displayName} Lv.{upgrade.Level} 구매! {upgrade.effect}");
     }
 
+    public int[] ExportLevels()
+    {
+        int[] levels = new int[upgrades.Count];
+        for (int index = 0; index < upgrades.Count; index++)
+        {
+            levels[index] = upgrades[index].Level;
+        }
+
+        return levels;
+    }
+
+    public void ImportLevels(int[] levels)
+    {
+        if (levels == null)
+        {
+            return;
+        }
+
+        for (int index = 0; index < upgrades.Count && index < levels.Length; index++)
+        {
+            upgrades[index].SetLevel(levels[index]);
+        }
+    }
+
     public string BuildShopText()
     {
         StringBuilder text = new StringBuilder("UPGRADE (스테이션 앞에서 1~5)\n");

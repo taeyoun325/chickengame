@@ -123,7 +123,7 @@ public sealed class HazardSystem : MonoBehaviour
 
     private void CheckSlips(float deltaTime)
     {
-        foreach (PlayerInteraction actor in FindObjectsByType<PlayerInteraction>(FindObjectsSortMode.None))
+        foreach (PlayerInteraction actor in FindObjectsByType<PlayerInteraction>(FindObjectsInactive.Exclude))
         {
             if (slipCooldowns.TryGetValue(actor, out float cooldown) && cooldown > 0f)
             {
@@ -156,7 +156,7 @@ public sealed class HazardSystem : MonoBehaviour
     /// <summary>탄 치킨을 튀김기에 오래 두면 불이 난다.</summary>
     private void CheckBurntFires(float deltaTime)
     {
-        foreach (Station station in FindObjectsByType<Station>(FindObjectsSortMode.None))
+        foreach (Station station in FindObjectsByType<Station>(FindObjectsInactive.Exclude))
         {
             if (station.stationType != StationType.Fryer)
             {
@@ -230,7 +230,7 @@ public sealed class HazardSystem : MonoBehaviour
     {
         Station picked = null;
         int seen = 0;
-        foreach (Station station in FindObjectsByType<Station>(FindObjectsSortMode.None))
+        foreach (Station station in FindObjectsByType<Station>(FindObjectsInactive.Exclude))
         {
             if (station.stationType != StationType.Fryer)
             {

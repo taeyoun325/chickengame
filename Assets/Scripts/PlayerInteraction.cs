@@ -118,7 +118,17 @@ public sealed class PlayerInteraction : MonoBehaviour
         Vector3 spot = transform.position + transform.forward * 0.8f;
         spot.y = 0.35f;
         dropped.transform.position = spot;
+
+        // 떨어진 치킨은 실제로 굴러가도록 물리를 붙인다.
+        Rigidbody body = dropped.GetComponent<Rigidbody>();
+        if (body == null)
+        {
+            body = dropped.gameObject.AddComponent<Rigidbody>();
+            body.mass = 0.6f;
+        }
+
         dropped.SetHeld(false);
+        body.linearVelocity = transform.forward * 2f;
         dropped.MarkDirty();
 
         if (RestaurantGame.Instance != null)
@@ -192,7 +202,7 @@ public sealed class PlayerInteraction : MonoBehaviour
     {
         Station closest = null;
         float closestDistance = 2.4f;
-        foreach (Station station in FindObjectsByType<Station>(FindObjectsSortMode.None))
+        foreach (Station station in FindObjectsByType<Station>(FindObjectsInactive.Exclude))
         {
             float distance = Vector3.Distance(transform.position, station.transform.position);
             if (distance < closestDistance)
@@ -209,7 +219,7 @@ public sealed class PlayerInteraction : MonoBehaviour
     {
         FoodItem closest = null;
         float closestDistance = 2f;
-        foreach (FoodItem food in FindObjectsByType<FoodItem>(FindObjectsSortMode.None))
+        foreach (FoodItem food in FindObjectsByType<FoodItem>(FindObjectsInactive.Exclude))
         {
             if (food.state == FoodState.Frying)
             {
