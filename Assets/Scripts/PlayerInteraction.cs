@@ -18,9 +18,28 @@ public sealed class PlayerInteraction : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+        if (Keyboard.current == null)
+        {
+            return;
+        }
+
+        if (Keyboard.current.eKey.wasPressedThisFrame)
         {
             Interact();
+        }
+
+        if (Keyboard.current.qKey.wasPressedThisFrame)
+        {
+            SwitchSauce();
+        }
+    }
+
+    private void SwitchSauce()
+    {
+        Station station = FindNearbyStation();
+        if (station != null && station.stationType == StationType.Sauce && RestaurantGame.Instance != null)
+        {
+            RestaurantGame.Instance.CycleSauce(station);
         }
     }
 
