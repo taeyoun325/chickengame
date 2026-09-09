@@ -20,10 +20,12 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         RandomEventSystem eventSystem = gameObject.AddComponent<RandomEventSystem>();
         eventSystem.Initialise(game);
         gameObject.AddComponent<GameAudio>();
+        GameFlow flow = gameObject.AddComponent<GameFlow>();
+        flow.Initialise(game);
         HazardSystem hazardSystem = gameObject.AddComponent<HazardSystem>();
         hazardSystem.Initialise(game);
         game.ConnectHazards(hazardSystem);
-        BuildHud(game, delivery, upgradeSystem, eventSystem);
+        BuildHud(game, delivery, upgradeSystem, eventSystem, flow);
         Debug.Log($"Chicken Game ready - DAY {game.Day}, 매출 {game.Revenue}");
     }
 
@@ -127,7 +129,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         player.GetComponent<Renderer>().material.color = new Color(0.25f, 0.65f, 1f);
     }
 
-    private void BuildHud(RestaurantGame game, DeliverySystem delivery, UpgradeSystem upgradeSystem, RandomEventSystem eventSystem)
+    private void BuildHud(RestaurantGame game, DeliverySystem delivery, UpgradeSystem upgradeSystem, RandomEventSystem eventSystem, GameFlow flow)
     {
         GameObject canvasObject = new GameObject("HUD");
         Canvas canvas = canvasObject.AddComponent<Canvas>();
@@ -192,33 +194,48 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
 
         game.ConnectUpgrades(upgradeSystem, upgradeShop);
         game.ConnectEvents(eventSystem, eventBanner);
-        BuildSettlementPanel(canvasObject.transform, game);
-        game.LoadProgress();
+        BuildPanels(canvasObject.transform, game, flow);
     }
 
-    /// <summary>하루가 끝나면 뜨는 결산 화면.</summary>
-    private static void BuildSettlementPanel(Transform parent, RestaurantGame game)
+    /// <summary>타이틀, 일시정지, 결산, 결과 화면을 만들고 GameFlow 에 넘긴다.</summary>
+    private static void BuildPanels(Transform parent, RestaurantGame game, GameFlow flow)
     {
-        GameObject panel = new GameObject("Settlement Panel");
+        Text titleLabel;
+        GameObject title = CreatePanel(parent, "Title Panel", 760f, 520f, 26, out titleLabel);
+        Text pauseLabel;
+        GameObject pause = CreatePanel(parent, "Pause Panel", 620f, 300f, 26, out pauseLabel);
+        pauseLabel.text = "일시정지\n\nESC  계속하기\nR  처음부터";
+        Text settlementLabel;
+        GameObject settlement = CreatePanel(parent, "Settlement Panel", 760f, 500f, 22, out settlementLabel);
+        Text resultLabel;
+        GameObject result = CreatePanel(parent, "Result Panel", 760f, 500f, 24, out resultLabel);
+
+        flow.ConnectPanels(title, titleLabel, pause, settlement, settlementLabel, result, resultLabel);
+    }
+
+    private static GameObject CreatePanel(Transform parent, string name, float width, float height, int fontSize, out Text label)
+    {
+        GameObject panel = new GameObject(name);
         panel.transform.SetParent(parent, false);
         Image background = panel.AddComponent<Image>();
-        background.color = new Color(0.05f, 0.04f, 0.03f, 0.92f);
+        background.color = new Color(0.05f, 0.04f, 0.03f, 0.93f);
         RectTransform rect = background.rectTransform;
         rect.anchorMin = new Vector2(0.5f, 0.5f);
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = new Vector2(720f, 460f);
+        rect.sizeDelta = new Vector2(width, height);
         rect.anchoredPosition = Vector2.zero;
 
-        Text report = CreateLabel(panel.transform, string.Empty, Vector2.zero, 22);
-        report.alignment = TextAnchor.MiddleCenter;
-        report.rectTransform.anchorMin = new Vector2(0f, 0f);
-        report.rectTransform.anchorMax = new Vector2(1f, 1f);
-        report.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        report.rectTransform.offsetMin = new Vector2(32f, 32f);
-        report.rectTransform.offsetMax = new Vector2(-32f, -32f);
+        label = CreateLabel(panel.transform, string.Empty, Vector2.zero, fontSize);
+        label.alignment = TextAnchor.MiddleCenter;
+        label.rectTransform.anchorMin = Vector2.zero;
+        label.rectTransform.anchorMax = Vector2.one;
+        label.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        label.rectTransform.offsetMin = new Vector2(32f, 32f);
+        label.rectTransform.offsetMax = new Vector2(-32f, -32f);
 
-        game.ConnectSettlement(panel, report);
+        panel.SetActive(false);
+        return panel;
     }
 
     private static Text CreateLabel(Transform parent, string text, Vector2 position, int fontSize)

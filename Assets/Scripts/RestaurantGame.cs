@@ -32,6 +32,7 @@ public sealed class RestaurantGame : MonoBehaviour
     private const float OrderPatience = 45f;
     private const float BaseFryTime = 5f;
     private const int MaxWaitingOrders = 5;
+    private const int MaxReputation = 100;
     private static readonly Vector3 DoorPoint = new Vector3(0f, 0.9f, -8f);
     private static readonly Vector3 ExitPoint = new Vector3(0f, 0.9f, -10f);
     private static readonly Color NormalAmbient = new Color(0.55f, 0.48f, 0.38f);
@@ -45,10 +46,9 @@ public sealed class RestaurantGame : MonoBehaviour
     private int burntChicken;
     private int spending;
     private int wastedFood;
+    private int reputation = MaxReputation;
+    private bool finished;
     private HazardSystem hazards;
-    private GameObject settlementPanel;
-    private Text settlementText;
-    private bool settlementOpen;
     private int dayStartNetRevenue;
     private int dayStartOrders;
     private int dayStartSuccess;
@@ -78,6 +78,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
     public int Day => day;
     public int Revenue => revenue;
+    public int Reputation => reputation;
 
     private void Awake()
     {
@@ -98,14 +99,8 @@ public sealed class RestaurantGame : MonoBehaviour
 
     private void Update()
     {
-        if (settlementOpen)
+        if (GameFlow.Instance != null && !GameFlow.Instance.IsPlaying)
         {
-            if (UnityEngine.InputSystem.Keyboard.current != null &&
-                UnityEngine.InputSystem.Keyboard.current.spaceKey.wasPressedThisFrame)
-            {
-                StartNextDay();
-            }
-
             return;
         }
 
@@ -132,6 +127,7 @@ public sealed class RestaurantGame : MonoBehaviour
             if (order.remainingTime <= 0f)
             {
                 failedOrders++;
+                ChangeReputation(-8);
                 SendCustomerHome(order);
                 activeOrders.RemoveAt(index);
                 queueChanged = true;
@@ -155,6 +151,7 @@ public sealed class RestaurantGame : MonoBehaviour
             messageLabel.text = string.Empty;
         }
 
+        CheckVictory();
         UpdateHud();
     }
 
@@ -197,22 +194,10 @@ public sealed class RestaurantGame : MonoBehaviour
         hazards = system;
     }
 
-    public void ConnectSettlement(GameObject panel, Text panelText)
-    {
-        settlementPanel = panel;
-        settlementText = panelText;
-        if (settlementPanel != null)
-        {
-            settlementPanel.SetActive(false);
-        }
-    }
-
     /// <summary>하루가 끝나면 게임을 멈추고 결산을 보여준 뒤 저장한다.</summary>
     private void EndDay()
     {
         dayTimer = 0f;
-        settlementOpen = true;
-        Time.timeScale = 0f;
 
         int dayRevenue = revenue + spending - dayStartNetRevenue;
         int dayOrders = totalOrders - dayStartOrders;
@@ -237,26 +222,19 @@ public sealed class RestaurantGame : MonoBehaviour
         text.AppendLine();
         text.AppendLine("SPACE 를 눌러 다음 DAY 시작");
 
-        if (settlementText != null)
-        {
-            settlementText.text = text.ToString();
-        }
-
-        if (settlementPanel != null)
-        {
-            settlementPanel.SetActive(true);
-        }
-
         SaveProgress();
+
+        if (GameFlow.Instance != null)
+        {
+            GameFlow.Instance.EnterSettlement(text.ToString());
+        }
     }
 
-    private void StartNextDay()
+    public void StartNextDay()
     {
-        settlementOpen = false;
-        Time.timeScale = 1f;
-        if (settlementPanel != null)
+        if (GameFlow.Instance != null)
         {
-            settlementPanel.SetActive(false);
+            GameFlow.Instance.ResumeFromSettlement();
         }
 
         day++;
@@ -279,6 +257,7 @@ public sealed class RestaurantGame : MonoBehaviour
             burntChicken = burntChicken,
             wastedFood = wastedFood,
             spending = spending,
+            reputation = reputation,
             upgradeLevels = upgrades != null ? upgrades.ExportLevels() : System.Array.Empty<int>()
         };
 
@@ -302,6 +281,7 @@ public sealed class RestaurantGame : MonoBehaviour
         burntChicken = data.burntChicken;
         wastedFood = data.wastedFood;
         spending = data.spending;
+        reputation = data.reputation > 0 ? data.reputation : MaxReputation;
         if (upgrades != null)
         {
             upgrades.ImportLevels(data.upgradeLevels);
@@ -513,6 +493,7 @@ public sealed class RestaurantGame : MonoBehaviour
         int payout = order.recipe.price + Mathf.RoundToInt(order.DeliveryFee * deliveryFeeMultiplier);
         revenue += payout;
         successfulOrders++;
+        ChangeReputation(+2);
         PlaySound(GameSound.Delivery);
         ShowMessage($"배달 완료! {order.address} +₩{payout:N0}");
     }
@@ -520,7 +501,59 @@ public sealed class RestaurantGame : MonoBehaviour
     public void ReportDeliveryMissed(DeliveryOrder order)
     {
         failedOrders++;
+        ChangeReputation(-5);
         ShowMessage($"배달 주문 취소! {order.address}");
+    }
+
+    /// <summary>평판이 0이 되면 폐업, 목표 매출을 넘기면 승리.</summary>
+    public void ChangeReputation(int amount)
+    {
+        reputation = Mathf.Clamp(reputation + amount, 0, MaxReputation);
+        if (reputation <= 0)
+        {
+            FinishGame(false);
+        }
+    }
+
+    private void CheckVictory()
+    {
+        if (revenue >= TargetRevenue)
+        {
+            FinishGame(true);
+        }
+    }
+
+    private void FinishGame(bool won)
+    {
+        if (finished || GameFlow.Instance == null)
+        {
+            return;
+        }
+
+        finished = true;
+        StringBuilder text = new StringBuilder();
+        text.AppendLine(won ? "목표 달성! 치킨 재벌" : "평판 0 - 폐업했습니다");
+        text.AppendLine();
+        text.AppendLine($"DAY {day} 까지 영업");
+        text.AppendLine($"누적 매출  ₩{revenue:N0} / ₩{TargetRevenue:N0}");
+        text.AppendLine($"주문 {totalOrders}건   성공 {successfulOrders}   실패 {failedOrders}");
+        text.AppendLine($"탄 치킨 {burntChicken}   버린 음식 {wastedFood}");
+        if (hazards != null)
+        {
+            text.AppendLine($"미끄러짐 {hazards.SlipCount}회   화재 {hazards.FireCount}회");
+        }
+
+        text.AppendLine();
+        text.AppendLine("SPACE 를 눌러 처음부터");
+
+        if (won)
+        {
+            GameFlow.Instance.EnterVictory(text.ToString());
+        }
+        else
+        {
+            GameFlow.Instance.EnterDefeat(text.ToString());
+        }
     }
 
     public static void PlaySound(GameSound sound)
@@ -553,6 +586,7 @@ public sealed class RestaurantGame : MonoBehaviour
         {
             food.burnCounted = true;
             burntChicken++;
+            ChangeReputation(-2);
             food.SetState(FoodState.Burnt);
             PlaySound(GameSound.Burnt);
             ShowMessage("치킨이 탔습니다!");
@@ -696,6 +730,7 @@ public sealed class RestaurantGame : MonoBehaviour
         int payout = order.recipe.price + bonus;
         revenue += payout;
         successfulOrders++;
+        ChangeReputation(+3);
         activeOrders.Remove(order);
         SendCustomerHome(order);
         ReflowQueue();
@@ -819,7 +854,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
         if (statsLabel != null)
         {
-            statsLabel.text = $"주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}" + (delivery != null ? $"  배달 {delivery.CompletedDeliveries}" : string.Empty);
+            statsLabel.text = $"평판 {reputation}/{MaxReputation}   주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}" + (delivery != null ? $"  배달 {delivery.CompletedDeliveries}" : string.Empty);
         }
     }
 }

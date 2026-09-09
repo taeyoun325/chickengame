@@ -28,6 +28,12 @@ public sealed class PlayerInteraction : MonoBehaviour
             return;
         }
 
+        // 타이틀, 일시정지, 결산 중에는 조작을 받지 않는다.
+        if (GameFlow.Instance != null && !GameFlow.Instance.IsPlaying)
+        {
+            return;
+        }
+
         if (Keyboard.current.eKey.wasPressedThisFrame)
         {
             Interact();

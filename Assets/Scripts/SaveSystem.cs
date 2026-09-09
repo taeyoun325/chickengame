@@ -14,6 +14,7 @@ public sealed class SaveData
     public int burntChicken;
     public int wastedFood;
     public int spending;
+    public int reputation = 100;
     public int[] upgradeLevels = Array.Empty<int>();
     public string savedAt = string.Empty;
 }
