@@ -1,0 +1,23 @@
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+.DS_Store
+Thumbs.db
+
+# Ignore the accidental nested Unity project created during initialization.
+/chickengame/
+unity-*.log
