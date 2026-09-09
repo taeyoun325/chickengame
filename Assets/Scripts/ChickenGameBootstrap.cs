@@ -18,7 +18,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         UpgradeSystem upgradeSystem = gameObject.AddComponent<UpgradeSystem>();
         upgradeSystem.Initialise(game);
         RegisterReserveFryers(game);
-        BuildHud(game, delivery, upgradeSystem);
+        RandomEventSystem eventSystem = gameObject.AddComponent<RandomEventSystem>();
+        eventSystem.Initialise(game);
+        BuildHud(game, delivery, upgradeSystem, eventSystem);
     }
 
     /// <summary>증설로 열리는 2, 3번 튀김기를 미리 만들어 두고 꺼둔다.</summary>
@@ -106,7 +108,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         player.GetComponent<Renderer>().material.color = new Color(0.25f, 0.65f, 1f);
     }
 
-    private void BuildHud(RestaurantGame game, DeliverySystem delivery, UpgradeSystem upgradeSystem)
+    private void BuildHud(RestaurantGame game, DeliverySystem delivery, UpgradeSystem upgradeSystem, RandomEventSystem eventSystem)
     {
         GameObject canvasObject = new GameObject("HUD");
         Canvas canvas = canvasObject.AddComponent<Canvas>();
@@ -148,7 +150,16 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
 
         game.ConnectHud(revenue, day, orders, message, stats);
         game.ConnectDelivery(delivery, deliveryStatus);
+        Text eventBanner = CreateLabel(canvasObject.transform, string.Empty, new Vector2(0f, -24f), 20);
+        eventBanner.rectTransform.anchorMin = new Vector2(0.5f, 1f);
+        eventBanner.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+        eventBanner.rectTransform.pivot = new Vector2(0.5f, 1f);
+        eventBanner.rectTransform.sizeDelta = new Vector2(600f, 40f);
+        eventBanner.alignment = TextAnchor.UpperCenter;
+        eventBanner.color = new Color(1f, 0.85f, 0.3f);
+
         game.ConnectUpgrades(upgradeSystem, upgradeShop);
+        game.ConnectEvents(eventSystem, eventBanner);
     }
 
     private static Text CreateLabel(Transform parent, string text, Vector2 position, int fontSize)

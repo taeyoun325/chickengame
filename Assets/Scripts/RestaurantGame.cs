@@ -34,6 +34,7 @@ public sealed class RestaurantGame : MonoBehaviour
     private const int MaxWaitingOrders = 5;
     private static readonly Vector3 DoorPoint = new Vector3(0f, 0.9f, -8f);
     private static readonly Vector3 ExitPoint = new Vector3(0f, 0.9f, -10f);
+    private static readonly Color NormalAmbient = new Color(0.55f, 0.48f, 0.38f);
 
     private readonly List<RestaurantOrder> activeOrders = new List<RestaurantOrder>();
     private int revenue;
@@ -60,6 +61,12 @@ public sealed class RestaurantGame : MonoBehaviour
     private float fryTime = BaseFryTime;
     private float burnTime = BaseFryTime * 1.6f;
     private float orderInterval = BaseOrderInterval;
+    private float orderIntervalMultiplier = 1f;
+    private float patienceMultiplier = 1f;
+    private float deliveryFeeMultiplier = 1f;
+    private bool powerOn = true;
+    private RandomEventSystem events;
+    private Text eventLabel;
 
     public int Day => day;
     public int Revenue => revenue;
@@ -94,7 +101,7 @@ public sealed class RestaurantGame : MonoBehaviour
         if (orderTimer <= 0f)
         {
             CreateOrder();
-            orderTimer = orderInterval;
+            orderTimer = orderInterval * orderIntervalMultiplier;
         }
 
         bool queueChanged = false;
@@ -229,6 +236,63 @@ public sealed class RestaurantGame : MonoBehaviour
         }
     }
 
+    public void ConnectEvents(RandomEventSystem system, Text eventText)
+    {
+        events = system;
+        eventLabel = eventText;
+    }
+
+    public void OnEventStarted(GameEvent gameEvent)
+    {
+        switch (gameEvent.kind)
+        {
+            case GameEventKind.RushHour:
+                orderIntervalMultiplier = 0.5f;
+                break;
+            case GameEventKind.AppPromotion:
+                deliveryFeeMultiplier = 2f;
+                break;
+            case GameEventKind.PickyCustomers:
+                patienceMultiplier = 0.5f;
+                break;
+            case GameEventKind.Blackout:
+                powerOn = false;
+                RenderSettings.ambientLight = new Color(0.14f, 0.12f, 0.12f);
+                break;
+        }
+
+        ShowMessage($"[{gameEvent.displayName}] {gameEvent.description}");
+    }
+
+    public void OnEventEnded(GameEvent gameEvent)
+    {
+        orderIntervalMultiplier = 1f;
+        deliveryFeeMultiplier = 1f;
+        patienceMultiplier = 1f;
+        if (!powerOn)
+        {
+            powerOn = true;
+            RenderSettings.ambientLight = NormalAmbient;
+        }
+
+        ShowMessage($"{gameEvent.displayName} 종료");
+    }
+
+    /// <summary>단체 주문처럼 손님이 한꺼번에 몰릴 때 쓴다.</summary>
+    public void SpawnOrderBurst(int count)
+    {
+        for (int index = 0; index < count; index++)
+        {
+            CreateOrder();
+        }
+    }
+
+    public void PayFine(int amount)
+    {
+        revenue = Mathf.Max(0, revenue - amount);
+        spending += amount;
+    }
+
     private void HandOverDelivery(PlayerInteraction actor)
     {
         FoodItem food = actor.HeldFood;
@@ -257,7 +321,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
     public void ReportDeliveryComplete(DeliveryOrder order)
     {
-        int payout = order.recipe.price + order.DeliveryFee;
+        int payout = order.recipe.price + Mathf.RoundToInt(order.DeliveryFee * deliveryFeeMultiplier);
         revenue += payout;
         successfulOrders++;
         ShowMessage($"배달 완료! {order.address} +₩{payout:N0}");
@@ -281,7 +345,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
     public void TickFood(FoodItem food, float deltaTime)
     {
-        if (food.state != FoodState.Frying)
+        if (food.state != FoodState.Frying || !powerOn)
         {
             return;
         }
@@ -462,7 +526,7 @@ public sealed class RestaurantGame : MonoBehaviour
         Destroy(customerObject.GetComponent<Collider>());
         Customer customer = customerObject.AddComponent<Customer>();
         customer.Initialise(DoorPoint, QueueSlot(activeOrders.Count), ExitPoint, recipe.packagedColor);
-        activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer, OrderPatience));
+        activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer, OrderPatience * patienceMultiplier));
         ShowMessage($"주문 #{totalOrders} {recipe.displayName} 들어왔습니다!");
     }
 
@@ -520,6 +584,11 @@ public sealed class RestaurantGame : MonoBehaviour
 
                 ordersLabel.text = text.ToString();
             }
+        }
+
+        if (eventLabel != null && events != null)
+        {
+            eventLabel.text = events.BuildStatusText();
         }
 
         if (upgradeLabel != null && upgrades != null)
