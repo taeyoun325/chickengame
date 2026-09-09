@@ -13,7 +13,16 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         GameObject gameObject = new GameObject("Restaurant Game");
         RestaurantGame game = gameObject.AddComponent<RestaurantGame>();
         game.SetPlayer(player);
-        BuildHud(game);
+        DeliverySystem delivery = gameObject.AddComponent<DeliverySystem>();
+        delivery.Initialise(game, BuildScooter().transform);
+        BuildHud(game, delivery);
+    }
+
+    private GameObject BuildScooter()
+    {
+        GameObject scooter = CreateBlock("Delivery Scooter", new Vector3(3.5f, 0.4f, -7.5f), new Vector3(0.9f, 0.8f, 1.8f), new Color(0.15f, 0.45f, 0.85f));
+        Destroy(scooter.GetComponent<Collider>());
+        return scooter;
     }
 
     private void BuildLighting()
@@ -40,6 +49,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateStation("Sauce Table", StationType.Sauce, new Vector3(-7f, 0.8f, 0f), new Vector3(1.6f, 1.6f, 3f), new Color(0.75f, 0.2f, 0.3f));
         CreateStation("Packing Counter", StationType.Packing, new Vector3(0f, 0.8f, 3.5f), new Vector3(3f, 1.6f, 1.5f), new Color(0.95f, 0.75f, 0.25f));
         CreateStation("Checkout", StationType.Checkout, new Vector3(4f, 0.8f, -2.5f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.25f, 0.65f, 0.35f));
+        CreateStation("Delivery Counter", StationType.Delivery, new Vector3(-4f, 0.8f, -2.5f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.15f, 0.45f, 0.85f));
         CreateBlock("Customer Queue", new Vector3(0f, 0.2f, -4f), new Vector3(5f, 0.4f, 0.5f), new Color(0.9f, 0.25f, 0.25f));
     }
 
@@ -85,7 +95,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         player.GetComponent<Renderer>().material.color = new Color(0.25f, 0.65f, 1f);
     }
 
-    private void BuildHud(RestaurantGame game)
+    private void BuildHud(RestaurantGame game, DeliverySystem delivery)
     {
         GameObject canvasObject = new GameObject("HUD");
         Canvas canvas = canvasObject.AddComponent<Canvas>();
@@ -112,7 +122,14 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         message.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
         stats.rectTransform.anchorMin = new Vector2(1f, 1f);
         stats.rectTransform.anchorMax = new Vector2(1f, 1f);
+        Text deliveryStatus = CreateLabel(canvasObject.transform, "배달 대기 없음", new Vector2(-24f, -140f), 16);
+        deliveryStatus.rectTransform.anchorMin = new Vector2(1f, 1f);
+        deliveryStatus.rectTransform.anchorMax = new Vector2(1f, 1f);
+        deliveryStatus.rectTransform.pivot = new Vector2(1f, 1f);
+        deliveryStatus.alignment = TextAnchor.UpperRight;
+
         game.ConnectHud(revenue, day, orders, message, stats);
+        game.ConnectDelivery(delivery, deliveryStatus);
     }
 
     private static Text CreateLabel(Transform parent, string text, Vector2 position, int fontSize)

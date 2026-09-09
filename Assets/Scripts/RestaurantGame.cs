@@ -52,6 +52,8 @@ public sealed class RestaurantGame : MonoBehaviour
     private Text ordersLabel;
     private Text messageLabel;
     private Text statsLabel;
+    private Text deliveryLabel;
+    private DeliverySystem delivery;
 
     public int Day => day;
     public int Revenue => revenue;
@@ -147,7 +149,56 @@ public sealed class RestaurantGame : MonoBehaviour
             case StationType.Checkout:
                 CompleteOrder(actor);
                 break;
+            case StationType.Delivery:
+                HandOverDelivery(actor);
+                break;
         }
+    }
+
+    public void ConnectDelivery(DeliverySystem system, Text deliveryText)
+    {
+        delivery = system;
+        deliveryLabel = deliveryText;
+    }
+
+    private void HandOverDelivery(PlayerInteraction actor)
+    {
+        FoodItem food = actor.HeldFood;
+        if (food == null || food.state != FoodState.Packaged)
+        {
+            ShowMessage("포장된 치킨을 들고 오세요");
+            return;
+        }
+
+        if (delivery == null)
+        {
+            return;
+        }
+
+        DeliveryOrder order = delivery.MatchPending(food.Recipe.kind);
+        if (order == null)
+        {
+            ShowMessage($"{food.Recipe.displayName} 배달 주문이 없습니다");
+            return;
+        }
+
+        delivery.Dispatch(order);
+        Destroy(food.gameObject);
+        ShowMessage($"배달 출발! {order.address} ({Mathf.CeilToInt(order.RideTime)}s)");
+    }
+
+    public void ReportDeliveryComplete(DeliveryOrder order)
+    {
+        int payout = order.recipe.price + order.DeliveryFee;
+        revenue += payout;
+        successfulOrders++;
+        ShowMessage($"배달 완료! {order.address} +₩{payout:N0}");
+    }
+
+    public void ReportDeliveryMissed(DeliveryOrder order)
+    {
+        failedOrders++;
+        ShowMessage($"배달 주문 취소! {order.address}");
     }
 
     public void ShowMessage(string message)
@@ -403,9 +454,14 @@ public sealed class RestaurantGame : MonoBehaviour
             }
         }
 
+        if (deliveryLabel != null && delivery != null)
+        {
+            deliveryLabel.text = delivery.BuildStatusText();
+        }
+
         if (statsLabel != null)
         {
-            statsLabel.text = $"주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}";
+            statsLabel.text = $"주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}" + (delivery != null ? $"  배달 {delivery.CompletedDeliveries}" : string.Empty);
         }
     }
 }
