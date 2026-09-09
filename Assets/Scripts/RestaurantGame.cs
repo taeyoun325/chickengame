@@ -8,15 +8,17 @@ public sealed class RestaurantOrder
 {
     public readonly int number;
     public readonly MenuRecipe recipe;
-    public readonly GameObject customer;
+    public readonly Customer customer;
+    public readonly float patience;
     public float remainingTime;
 
-    public RestaurantOrder(int orderNumber, MenuRecipe orderRecipe, GameObject customerObject, float patience)
+    public RestaurantOrder(int orderNumber, MenuRecipe orderRecipe, Customer customerObject, float orderPatience)
     {
         number = orderNumber;
         recipe = orderRecipe;
         customer = customerObject;
-        remainingTime = patience;
+        patience = orderPatience;
+        remainingTime = orderPatience;
     }
 }
 
@@ -31,6 +33,8 @@ public sealed class RestaurantGame : MonoBehaviour
     private const float FryTime = 5f;
     private const float BurnTime = 8f;
     private const int MaxWaitingOrders = 5;
+    private static readonly Vector3 DoorPoint = new Vector3(0f, 0.9f, -8f);
+    private static readonly Vector3 ExitPoint = new Vector3(0f, 0.9f, -10f);
 
     private readonly List<RestaurantOrder> activeOrders = new List<RestaurantOrder>();
     private int revenue;
@@ -84,17 +88,29 @@ public sealed class RestaurantGame : MonoBehaviour
             orderTimer = OrderInterval;
         }
 
+        bool queueChanged = false;
         for (int index = activeOrders.Count - 1; index >= 0; index--)
         {
             RestaurantOrder order = activeOrders[index];
             order.remainingTime -= Time.deltaTime;
+            if (order.customer != null)
+            {
+                order.customer.ShowPatience(order.remainingTime / order.patience);
+            }
+
             if (order.remainingTime <= 0f)
             {
                 failedOrders++;
-                Destroy(order.customer);
+                SendCustomerHome(order);
                 activeOrders.RemoveAt(index);
-                ShowMessage($"주문 #{order.number} 취소! 손님이 떠났습니다");
+                queueChanged = true;
+                ShowMessage($"주문 #{order.number} 취소! 손님이 화나서 떠났습니다");
             }
+        }
+
+        if (queueChanged)
+        {
+            ReflowQueue();
         }
 
         if (dayTimer >= DayLength)
@@ -286,7 +302,8 @@ public sealed class RestaurantGame : MonoBehaviour
         revenue += payout;
         successfulOrders++;
         activeOrders.Remove(order);
-        Destroy(order.customer);
+        SendCustomerHome(order);
+        ReflowQueue();
         Destroy(food.gameObject);
         ShowMessage($"주문 #{order.number} {order.recipe.displayName} 완료! +₩{payout:N0}");
     }
@@ -320,13 +337,40 @@ public sealed class RestaurantGame : MonoBehaviour
 
         totalOrders++;
         MenuRecipe recipe = MenuDatabase.RandomFor(day);
-        GameObject customer = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        customer.name = $"Customer {totalOrders}";
-        customer.transform.position = new Vector3(-4.5f + activeOrders.Count * 2.2f, 0.9f, -4f);
-        customer.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
-        customer.GetComponent<Renderer>().material.color = recipe.packagedColor;
+        GameObject customerObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        customerObject.name = $"Customer {totalOrders}";
+        customerObject.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
+        Destroy(customerObject.GetComponent<Collider>());
+        Customer customer = customerObject.AddComponent<Customer>();
+        customer.Initialise(DoorPoint, QueueSlot(activeOrders.Count), ExitPoint, recipe.packagedColor);
         activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer, OrderPatience));
         ShowMessage($"주문 #{totalOrders} {recipe.displayName} 들어왔습니다!");
+    }
+
+    private static Vector3 QueueSlot(int index)
+    {
+        return new Vector3(-4.5f + index * 2.2f, 0.9f, -4f);
+    }
+
+    private static void SendCustomerHome(RestaurantOrder order)
+    {
+        if (order.customer != null)
+        {
+            order.customer.Leave();
+        }
+    }
+
+    /// <summary>앞 손님이 빠지면 뒷 손님들이 한 칸씩 당겨 선다.</summary>
+    private void ReflowQueue()
+    {
+        for (int index = 0; index < activeOrders.Count; index++)
+        {
+            Customer customer = activeOrders[index].customer;
+            if (customer != null)
+            {
+                customer.SetQueueSlot(QueueSlot(index));
+            }
+        }
     }
 
     private void UpdateHud()

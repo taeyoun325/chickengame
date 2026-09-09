@@ -32,6 +32,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateBlock("Back Wall", new Vector3(0f, 2f, 6f), new Vector3(18f, 4f, 0.5f), new Color(0.38f, 0.18f, 0.12f));
         CreateBlock("Left Wall", new Vector3(-9f, 2f, 0f), new Vector3(0.5f, 4f, 12f), new Color(0.38f, 0.18f, 0.12f));
         CreateBlock("Right Wall", new Vector3(9f, 2f, 0f), new Vector3(0.5f, 4f, 12f), new Color(0.38f, 0.18f, 0.12f));
+        CreateBlock("Entrance Path", new Vector3(0f, -0.25f, -8.5f), new Vector3(6f, 0.5f, 5f), new Color(0.3f, 0.28f, 0.26f));
+        CreateBlock("Front Wall Left", new Vector3(-5.75f, 2f, -6f), new Vector3(6.5f, 4f, 0.5f), new Color(0.38f, 0.18f, 0.12f));
+        CreateBlock("Front Wall Right", new Vector3(5.75f, 2f, -6f), new Vector3(6.5f, 4f, 0.5f), new Color(0.38f, 0.18f, 0.12f));
         CreateStation("Fryer", StationType.Fryer, new Vector3(-4f, 0.8f, 2.5f), new Vector3(3f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f));
         CreateStation("Fridge", StationType.Fridge, new Vector3(5f, 1.5f, 3.5f), new Vector3(2f, 3f, 2f), new Color(0.35f, 0.7f, 0.8f));
         CreateStation("Sauce Table", StationType.Sauce, new Vector3(-7f, 0.8f, 0f), new Vector3(1.6f, 1.6f, 3f), new Color(0.75f, 0.2f, 0.3f));
