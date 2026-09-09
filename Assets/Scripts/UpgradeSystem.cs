@@ -109,6 +109,8 @@ public sealed class UpgradeSystem : MonoBehaviour
 
         upgrade.LevelUp();
         game.ApplyUpgrades();
+        RestaurantGame.PlaySound(GameSound.Purchase);
+        GameEffects.Burst(transform.position + Vector3.up, new Color(0.6f, 0.4f, 0.9f));
         game.ShowMessage($"{upgrade.displayName} Lv.{upgrade.Level} 구매! {upgrade.effect}");
     }
 

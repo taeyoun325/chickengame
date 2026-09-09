@@ -135,6 +135,7 @@ public sealed class RestaurantGame : MonoBehaviour
                 SendCustomerHome(order);
                 activeOrders.RemoveAt(index);
                 queueChanged = true;
+                PlaySound(GameSound.Fail);
                 ShowMessage($"주문 #{order.number} 취소! 손님이 화나서 떠났습니다");
             }
         }
@@ -512,6 +513,7 @@ public sealed class RestaurantGame : MonoBehaviour
         int payout = order.recipe.price + Mathf.RoundToInt(order.DeliveryFee * deliveryFeeMultiplier);
         revenue += payout;
         successfulOrders++;
+        PlaySound(GameSound.Delivery);
         ShowMessage($"배달 완료! {order.address} +₩{payout:N0}");
     }
 
@@ -519,6 +521,14 @@ public sealed class RestaurantGame : MonoBehaviour
     {
         failedOrders++;
         ShowMessage($"배달 주문 취소! {order.address}");
+    }
+
+    public static void PlaySound(GameSound sound)
+    {
+        if (GameAudio.Instance != null)
+        {
+            GameAudio.Instance.Play(sound);
+        }
     }
 
     public void ShowMessage(string message)
@@ -544,6 +554,7 @@ public sealed class RestaurantGame : MonoBehaviour
             food.burnCounted = true;
             burntChicken++;
             food.SetState(FoodState.Burnt);
+            PlaySound(GameSound.Burnt);
             ShowMessage("치킨이 탔습니다!");
         }
         else if (food.cookProgress >= fryTime && food.state == FoodState.Frying)
@@ -590,7 +601,8 @@ public sealed class RestaurantGame : MonoBehaviour
             FoodItem chicken = actor.ReleaseHeldFood(station.transform);
             chicken.SetState(FoodState.Frying);
             chicken.cookProgress = 0f;
-            ShowMessage($"튀김 시작! {fryTime:0.0}초 뒤 꺼내세요");
+            PlaySound(GameSound.FryStart);
+        ShowMessage($"튀김 시작! {fryTime:0.0}초 뒤 꺼내세요");
             return;
         }
 
@@ -689,6 +701,8 @@ public sealed class RestaurantGame : MonoBehaviour
         ReflowQueue();
         actor.ClearHeldFood();
         Destroy(food.gameObject);
+        PlaySound(GameSound.Cash);
+        GameEffects.Burst(actor.transform.position + Vector3.up * 1.4f, new Color(1f, 0.85f, 0.25f));
         ShowMessage($"주문 #{order.number} {order.recipe.displayName} 완료! +₩{payout:N0}");
     }
 
@@ -728,6 +742,7 @@ public sealed class RestaurantGame : MonoBehaviour
         Customer customer = customerObject.AddComponent<Customer>();
         customer.Initialise(DoorPoint, QueueSlot(activeOrders.Count), ExitPoint, recipe.packagedColor);
         activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer, OrderPatience * patienceMultiplier));
+        PlaySound(GameSound.OrderIn);
         ShowMessage($"주문 #{totalOrders} {recipe.displayName} 들어왔습니다!");
     }
 

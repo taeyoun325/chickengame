@@ -19,6 +19,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         RegisterReserveFryers(game);
         RandomEventSystem eventSystem = gameObject.AddComponent<RandomEventSystem>();
         eventSystem.Initialise(game);
+        gameObject.AddComponent<GameAudio>();
         HazardSystem hazardSystem = gameObject.AddComponent<HazardSystem>();
         hazardSystem.Initialise(game);
         game.ConnectHazards(hazardSystem);
@@ -29,8 +30,16 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     /// <summary>증설로 열리는 2, 3번 튀김기를 미리 만들어 두고 꺼둔다.</summary>
     private void RegisterReserveFryers(RestaurantGame game)
     {
-        game.RegisterReserveFryer(CreateStation("Fryer 2", StationType.Fryer, new Vector3(-4f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)).gameObject);
-        game.RegisterReserveFryer(CreateStation("Fryer 3", StationType.Fryer, new Vector3(-1f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)).gameObject);
+        // 예비 튀김기도 켜지면 바로 김이 오르도록 파티클을 미리 붙여둔다.
+        game.RegisterReserveFryer(AddSteam(CreateStation("Fryer 2", StationType.Fryer, new Vector3(-4f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f))).gameObject);
+        game.RegisterReserveFryer(AddSteam(CreateStation("Fryer 3", StationType.Fryer, new Vector3(-1f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f))).gameObject);
+    }
+
+    private static Station AddSteam(Station station)
+    {
+        ParticleSystem steam = GameEffects.CreateSteam(station.transform, new Vector3(0f, 1.2f, 0f));
+        station.gameObject.AddComponent<FryerSteam>().Bind(station, steam);
+        return station;
     }
 
     private GameObject BuildScooter()
@@ -61,7 +70,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateBlock("Front Wall Right", new Vector3(5.75f, 2f, -6f), new Vector3(6.5f, 4f, 0.5f), new Color(0.38f, 0.18f, 0.12f));
         // 조리 라인은 뒷줄, 손님을 상대하는 카운터는 앞줄. 스테이션끼리는 최소 3m 떨어뜨려
         // 상호작용 반경(2.4m)이 겹치지 않게 한다.
-        CreateStation("Fryer", StationType.Fryer, new Vector3(-7f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f));
+        AddSteam(CreateStation("Fryer", StationType.Fryer, new Vector3(-7f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)));
         CreateStation("Sauce Table", StationType.Sauce, new Vector3(2f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.75f, 0.2f, 0.3f));
         CreateStation("Fridge", StationType.Fridge, new Vector3(5f, 1.5f, 4.2f), new Vector3(2f, 3f, 2f), new Color(0.35f, 0.7f, 0.8f));
         CreateStation("Upgrade Desk", StationType.Upgrade, new Vector3(8f, 0.8f, 4.2f), new Vector3(1.5f, 1.6f, 2.5f), new Color(0.55f, 0.35f, 0.8f));
@@ -98,6 +107,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         camera.transform.position = new Vector3(0f, 14f, -13f);
         camera.transform.rotation = Quaternion.Euler(48f, 0f, 0f);
         camera.fieldOfView = 55f;
+        cameraObject.AddComponent<AudioListener>();
         cameraObject.AddComponent<FollowPlayerCamera>();
     }
 

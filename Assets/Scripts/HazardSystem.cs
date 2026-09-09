@@ -147,6 +147,8 @@ public sealed class HazardSystem : MonoBehaviour
                 motor.Slip(SlipDuration, actor.transform.forward);
                 slipCooldowns[actor] = SlipCooldown;
                 SlipCount++;
+                RestaurantGame.PlaySound(GameSound.Slip);
+                GameEffects.Shake(0.35f, 0.35f);
                 game.ShowMessage("미끄러졌습니다!");
                 break;
             }
@@ -193,6 +195,9 @@ public sealed class HazardSystem : MonoBehaviour
         fire.Attach(fryer);
         fires.Add(fire);
         FireCount++;
+        RestaurantGame.PlaySound(GameSound.Fire);
+        GameEffects.Shake(0.6f, 0.5f);
+        GameEffects.Burst(fireObject.transform.position, new Color(1f, 0.45f, 0.1f), 30);
         game.ShowMessage("불이 났습니다! 소화기를 가져오세요");
     }
 

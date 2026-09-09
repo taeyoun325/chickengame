@@ -2,8 +2,19 @@ using UnityEngine;
 
 public sealed class FollowPlayerCamera : MonoBehaviour
 {
+    public static FollowPlayerCamera Instance { get; private set; }
+
     [SerializeField] private Vector3 offset = new Vector3(0f, 14f, -13f);
+
     private Transform target;
+    private float shakeTimer;
+    private float shakeDuration;
+    private float shakeStrength;
+
+    private void Awake()
+    {
+        Instance = this;
+    }
 
     private void Start()
     {
@@ -14,6 +25,14 @@ public sealed class FollowPlayerCamera : MonoBehaviour
         }
     }
 
+    /// <summary>사고가 났을 때 화면을 짧게 흔든다.</summary>
+    public void Shake(float duration, float strength)
+    {
+        shakeTimer = duration;
+        shakeDuration = Mathf.Max(0.01f, duration);
+        shakeStrength = strength;
+    }
+
     private void LateUpdate()
     {
         if (target == null)
@@ -21,7 +40,18 @@ public sealed class FollowPlayerCamera : MonoBehaviour
             return;
         }
 
-        transform.position = target.position + offset;
-        transform.LookAt(target.position + Vector3.up * 0.5f);
+        Vector3 focus = target.position;
+        transform.position = focus + offset;
+        transform.LookAt(focus + Vector3.up * 0.5f);
+
+        if (shakeTimer <= 0f)
+        {
+            return;
+        }
+
+        shakeTimer -= Time.unscaledDeltaTime;
+        float falloff = Mathf.Clamp01(shakeTimer / shakeDuration);
+        Vector3 jitter = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0f) * (shakeStrength * falloff);
+        transform.position += jitter;
     }
 }
