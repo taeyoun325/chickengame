@@ -20,6 +20,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         RegisterReserveFryers(game);
         RandomEventSystem eventSystem = gameObject.AddComponent<RandomEventSystem>();
         eventSystem.Initialise(game);
+        HazardSystem hazardSystem = gameObject.AddComponent<HazardSystem>();
+        hazardSystem.Initialise(game);
+        game.ConnectHazards(hazardSystem);
         BuildHud(game, delivery, upgradeSystem, eventSystem);
     }
 
@@ -61,6 +64,8 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateStation("Sauce Table", StationType.Sauce, new Vector3(-7f, 0.8f, 0f), new Vector3(1.6f, 1.6f, 3f), new Color(0.75f, 0.2f, 0.3f));
         CreateStation("Packing Counter", StationType.Packing, new Vector3(0f, 0.8f, 3.5f), new Vector3(3f, 1.6f, 1.5f), new Color(0.95f, 0.75f, 0.25f));
         CreateStation("Checkout", StationType.Checkout, new Vector3(4f, 0.8f, -2.5f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.25f, 0.65f, 0.35f));
+        CreateStation("Trash Bin", StationType.Trash, new Vector3(-8f, 0.6f, 3.5f), new Vector3(1.4f, 1.2f, 1.4f), new Color(0.25f, 0.25f, 0.28f));
+        CreateStation("Extinguisher Stand", StationType.Extinguisher, new Vector3(8f, 0.7f, 0f), new Vector3(1f, 1.4f, 1f), new Color(0.8f, 0.15f, 0.15f));
         CreateStation("Upgrade Desk", StationType.Upgrade, new Vector3(8f, 0.8f, 4.5f), new Vector3(1.5f, 1.6f, 2.5f), new Color(0.55f, 0.35f, 0.8f));
         CreateStation("Delivery Counter", StationType.Delivery, new Vector3(-4f, 0.8f, -2.5f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.15f, 0.45f, 0.85f));
         CreateBlock("Customer Queue", new Vector3(0f, 0.2f, -4f), new Vector3(5f, 0.4f, 0.5f), new Color(0.9f, 0.25f, 0.25f));
@@ -76,6 +81,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CharacterController controller = player.AddComponent<CharacterController>();
         controller.height = 2f;
         controller.radius = 0.4f;
+        player.AddComponent<PlayerMotor>();
         player.AddComponent<PlayerController>();
         player.AddComponent<PlayerInteraction>();
         player.GetComponent<Renderer>().material.color = new Color(0.95f, 0.8f, 0.2f);
@@ -103,6 +109,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CharacterController controller = player.AddComponent<CharacterController>();
         controller.height = 2f;
         controller.radius = 0.4f;
+        player.AddComponent<PlayerMotor>();
         player.AddComponent<LocalCoopPlayerController>();
         player.AddComponent<PlayerInteraction>();
         player.GetComponent<Renderer>().material.color = new Color(0.25f, 0.65f, 1f);
@@ -119,7 +126,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         Text revenue = CreateLabel(canvasObject.transform, "REVENUE  ₩0 / ₩10,000,000", new Vector2(24f, -24f), 26);
         Text day = CreateLabel(canvasObject.transform, "DAY 1   600s", new Vector2(-24f, -24f), 26);
         Text orders = CreateLabel(canvasObject.transform, "주문을 기다리는 중...", new Vector2(24f, -70f), 20);
-        Text instructions = CreateLabel(canvasObject.transform, "P1 WASD + E   P2 IJKL + E   Q 소스 변경\n냉장고 → 튀김기 → (양념대) → 포장대 → 계산대", new Vector2(24f, 24f), 18);
+        Text instructions = CreateLabel(canvasObject.transform, "P1 WASD + E   P2 IJKL + E   Q 소스   F 내려놓기   1~5 업그레이드\n냉장고 → 튀김기 → (양념대) → 포장대 → 계산대 / 배달대", new Vector2(24f, 24f), 18);
         Text message = CreateLabel(canvasObject.transform, string.Empty, new Vector2(0f, 90f), 24);
         Text stats = CreateLabel(canvasObject.transform, "주문 0  성공 0  실패 0  탄 치킨 0", new Vector2(-24f, -100f), 16);
         revenue.rectTransform.anchorMin = new Vector2(0f, 1f);

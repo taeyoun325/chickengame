@@ -1,23 +1,27 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[RequireComponent(typeof(CharacterController))]
+/// <summary>플레이어 2: IJKL 로컬 협동용.</summary>
+[RequireComponent(typeof(PlayerMotor))]
 public sealed class LocalCoopPlayerController : MonoBehaviour
 {
-    [SerializeField] private float moveSpeed = 5f;
-    private CharacterController characterController;
-    private float verticalVelocity;
+    private PlayerMotor motor;
 
     private void Awake()
     {
-        characterController = GetComponent<CharacterController>();
+        motor = GetComponent<PlayerMotor>();
     }
 
     private void Update()
     {
+        motor.SetInput(ReadMoveInput());
+    }
+
+    private static Vector2 ReadMoveInput()
+    {
         if (Keyboard.current == null)
         {
-            return;
+            return Vector2.zero;
         }
 
         Vector2 input = Vector2.zero;
@@ -25,22 +29,6 @@ public sealed class LocalCoopPlayerController : MonoBehaviour
         if (Keyboard.current.lKey.isPressed) input.x += 1f;
         if (Keyboard.current.kKey.isPressed) input.y -= 1f;
         if (Keyboard.current.iKey.isPressed) input.y += 1f;
-        input = Vector2.ClampMagnitude(input, 1f);
-
-        Vector3 movement = new Vector3(input.x, 0f, input.y);
-        if (movement.sqrMagnitude > 0.001f)
-        {
-            transform.forward = Vector3.Slerp(transform.forward, movement, 12f * Time.deltaTime);
-        }
-
-        if (characterController.isGrounded && verticalVelocity < 0f)
-        {
-            verticalVelocity = -2f;
-        }
-
-        verticalVelocity += -20f * Time.deltaTime;
-        Vector3 velocity = movement * GameTuning.MoveSpeed(moveSpeed);
-        velocity.y = verticalVelocity;
-        characterController.Move(velocity * Time.deltaTime);
+        return input.normalized;
     }
 }

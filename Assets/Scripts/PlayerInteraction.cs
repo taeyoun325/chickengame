@@ -7,8 +7,11 @@ public sealed class PlayerInteraction : MonoBehaviour
 
     private Transform holdPoint;
     private FoodItem heldFood;
+    private GameObject extinguisher;
 
     public FoodItem HeldFood => heldFood;
+    public bool CarryingExtinguisher => extinguisher != null;
+    public bool HandsFree => heldFood == null && extinguisher == null;
 
     private void Awake()
     {
@@ -30,12 +33,107 @@ public sealed class PlayerInteraction : MonoBehaviour
             Interact();
         }
 
+        if (Keyboard.current.fKey.wasPressedThisFrame)
+        {
+            DropEverything();
+        }
+
         if (Keyboard.current.qKey.wasPressedThisFrame)
         {
             SwitchSauce();
         }
 
         CheckUpgradeShopKeys();
+    }
+
+    public void SetHeldFood(FoodItem food)
+    {
+        heldFood = food;
+        food.transform.SetParent(holdPoint, false);
+        food.transform.localPosition = Vector3.zero;
+        food.transform.localRotation = Quaternion.identity;
+        food.SetHeld(true);
+    }
+
+    /// <summary>쓰레기통에 버렸을 때처럼 들고 있던 음식이 사라진 경우.</summary>
+    public void ClearHeldFood()
+    {
+        heldFood = null;
+    }
+
+    public FoodItem ReleaseHeldFood(Transform target)
+    {
+        if (heldFood == null)
+        {
+            return null;
+        }
+
+        FoodItem released = heldFood;
+        heldFood = null;
+        released.transform.SetParent(target, false);
+        released.transform.localPosition = Vector3.up * 1.2f;
+        released.transform.localRotation = Quaternion.identity;
+        released.SetHeld(false);
+        return released;
+    }
+
+    public void TakeExtinguisher()
+    {
+        if (extinguisher != null)
+        {
+            return;
+        }
+
+        extinguisher = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        extinguisher.name = "Extinguisher";
+        extinguisher.transform.SetParent(holdPoint, false);
+        extinguisher.transform.localPosition = Vector3.zero;
+        extinguisher.transform.localScale = new Vector3(0.3f, 0.45f, 0.3f);
+        Destroy(extinguisher.GetComponent<Collider>());
+        extinguisher.GetComponent<Renderer>().material.color = new Color(0.85f, 0.1f, 0.1f);
+    }
+
+    public void ReturnExtinguisher()
+    {
+        if (extinguisher != null)
+        {
+            Destroy(extinguisher);
+            extinguisher = null;
+        }
+    }
+
+    /// <summary>미끄러지거나 F 키를 누르면 들고 있던 것을 바닥에 떨어뜨린다.</summary>
+    public void DropEverything()
+    {
+        ReturnExtinguisher();
+
+        if (heldFood == null)
+        {
+            return;
+        }
+
+        FoodItem dropped = heldFood;
+        heldFood = null;
+        dropped.transform.SetParent(null);
+        Vector3 spot = transform.position + transform.forward * 0.8f;
+        spot.y = 0.35f;
+        dropped.transform.position = spot;
+        dropped.SetHeld(false);
+        dropped.MarkDirty();
+
+        if (RestaurantGame.Instance != null)
+        {
+            RestaurantGame.Instance.ShowMessage("떨어뜨렸습니다! 바닥에 닿은 치킨은 못 씁니다");
+        }
+    }
+
+    private void SwitchSauce()
+    {
+        Station station = FindNearbyStation();
+        if (station != null && station.stationType == StationType.Sauce && RestaurantGame.Instance != null)
+        {
+            RestaurantGame.Instance.CycleSauce(station);
+        }
     }
 
     /// <summary>업그레이드 스테이션 앞에서만 숫자 키가 구매로 이어진다.</summary>
@@ -60,43 +158,14 @@ public sealed class PlayerInteraction : MonoBehaviour
         }
     }
 
-    private void SwitchSauce()
-    {
-        Station station = FindNearbyStation();
-        if (station != null && station.stationType == StationType.Sauce && RestaurantGame.Instance != null)
-        {
-            RestaurantGame.Instance.CycleSauce(station);
-        }
-    }
-
-    public void SetHeldFood(FoodItem food)
-    {
-        heldFood = food;
-        food.transform.SetParent(holdPoint, false);
-        food.transform.localPosition = Vector3.zero;
-        food.transform.localRotation = Quaternion.identity;
-        food.SetHeld(true);
-    }
-
-    public FoodItem ReleaseHeldFood(Transform target)
-    {
-        if (heldFood == null)
-        {
-            return null;
-        }
-
-        FoodItem released = heldFood;
-        heldFood = null;
-        released.transform.SetParent(target, false);
-        released.transform.localPosition = Vector3.up * 1.2f;
-        released.transform.localRotation = Quaternion.identity;
-        released.SetHeld(false);
-        return released;
-    }
-
     private void Interact()
     {
         if (RestaurantGame.Instance == null)
+        {
+            return;
+        }
+
+        if (extinguisher != null && RestaurantGame.Instance.TryExtinguishNearby(transform.position))
         {
             return;
         }
@@ -108,13 +177,13 @@ public sealed class PlayerInteraction : MonoBehaviour
             return;
         }
 
-        if (heldFood == null)
+        if (HandsFree)
         {
             FoodItem nearbyFood = FindNearbyFood();
             if (nearbyFood != null)
             {
                 SetHeldFood(nearbyFood);
-                RestaurantGame.Instance.ShowMessage("들었습니다");
+                RestaurantGame.Instance.ShowMessage($"{nearbyFood.Describe()}을 들었습니다");
             }
         }
     }

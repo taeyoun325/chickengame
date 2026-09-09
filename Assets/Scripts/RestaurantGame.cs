@@ -44,6 +44,8 @@ public sealed class RestaurantGame : MonoBehaviour
     private int failedOrders;
     private int burntChicken;
     private int spending;
+    private int wastedFood;
+    private HazardSystem hazards;
     private float dayTimer;
     private float orderTimer = 3f;
     private float messageTimer;
@@ -169,7 +171,63 @@ public sealed class RestaurantGame : MonoBehaviour
             case StationType.Upgrade:
                 ShowMessage("1~5 키로 업그레이드를 구매하세요");
                 break;
+            case StationType.Trash:
+                ThrowAway(actor);
+                break;
+            case StationType.Extinguisher:
+                ToggleExtinguisher(actor);
+                break;
         }
+    }
+
+    public void ConnectHazards(HazardSystem system)
+    {
+        hazards = system;
+    }
+
+    public bool TryExtinguishNearby(Vector3 position)
+    {
+        if (hazards == null || !hazards.TryExtinguish(position))
+        {
+            return false;
+        }
+
+        ShowMessage("불을 껐습니다!");
+        return true;
+    }
+
+    private void ThrowAway(PlayerInteraction actor)
+    {
+        if (actor.HeldFood == null)
+        {
+            ShowMessage("버릴 것이 없습니다");
+            return;
+        }
+
+        string description = actor.HeldFood.Describe();
+        Destroy(actor.HeldFood.gameObject);
+        actor.ClearHeldFood();
+        wastedFood++;
+        ShowMessage($"{description}을 버렸습니다");
+    }
+
+    private void ToggleExtinguisher(PlayerInteraction actor)
+    {
+        if (actor.CarryingExtinguisher)
+        {
+            actor.ReturnExtinguisher();
+            ShowMessage("소화기를 제자리에 두었습니다");
+            return;
+        }
+
+        if (!actor.HandsFree)
+        {
+            ShowMessage("손을 비우고 오세요");
+            return;
+        }
+
+        actor.TakeExtinguisher();
+        ShowMessage("소화기를 들었습니다. 불 앞에서 E");
     }
 
     public void ConnectDelivery(DeliverySystem system, Text deliveryText)
@@ -385,6 +443,12 @@ public sealed class RestaurantGame : MonoBehaviour
 
     private void UseFryer(PlayerInteraction actor, Station station)
     {
+        if (hazards != null && hazards.IsOnFire(station))
+        {
+            ShowMessage("불이 붙은 튀김기입니다! 소화기를 쓰세요");
+            return;
+        }
+
         if (actor.HeldFood != null && actor.HeldFood.state == FoodState.Raw)
         {
             if (station.StoredFood != null)
@@ -445,6 +509,12 @@ public sealed class RestaurantGame : MonoBehaviour
         if (food == null || food.state != FoodState.Cooked)
         {
             ShowMessage("익은 치킨을 들고 오세요");
+            return;
+        }
+
+        if (food.dirty)
+        {
+            ShowMessage("바닥에 떨어진 치킨입니다. 쓰레기통에 버리세요");
             return;
         }
 

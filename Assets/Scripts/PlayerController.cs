@@ -1,40 +1,20 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[RequireComponent(typeof(CharacterController))]
+/// <summary>플레이어 1: WASD 또는 방향키.</summary>
+[RequireComponent(typeof(PlayerMotor))]
 public sealed class PlayerController : MonoBehaviour
 {
-    [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float gravity = -20f;
-
-    private CharacterController characterController;
-    private float verticalVelocity;
+    private PlayerMotor motor;
 
     private void Awake()
     {
-        characterController = GetComponent<CharacterController>();
+        motor = GetComponent<PlayerMotor>();
     }
 
     private void Update()
     {
-        Vector2 input = ReadMoveInput();
-        Vector3 movement = new Vector3(input.x, 0f, input.y);
-        movement = Vector3.ClampMagnitude(movement, 1f);
-
-        if (movement.sqrMagnitude > 0.001f)
-        {
-            transform.forward = Vector3.Slerp(transform.forward, movement, 12f * Time.deltaTime);
-        }
-
-        if (characterController.isGrounded && verticalVelocity < 0f)
-        {
-            verticalVelocity = -2f;
-        }
-
-        verticalVelocity += gravity * Time.deltaTime;
-        Vector3 velocity = movement * GameTuning.MoveSpeed(moveSpeed);
-        velocity.y = verticalVelocity;
-        characterController.Move(velocity * Time.deltaTime);
+        motor.SetInput(ReadMoveInput());
     }
 
     private static Vector2 ReadMoveInput()

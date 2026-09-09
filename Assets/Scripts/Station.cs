@@ -8,7 +8,9 @@ public enum StationType
     Packing,
     Checkout,
     Delivery,
-    Upgrade
+    Upgrade,
+    Trash,
+    Extinguisher
 }
 
 public sealed class Station : MonoBehaviour
