@@ -28,6 +28,10 @@ public sealed class GameFlow : MonoBehaviour
     private Text settlementText;
     private Text resultText;
     private GameObject localPlayerRoot;
+    private float autoAdvanceTimer;
+
+    private static bool AutoAdvanceDays =>
+        System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-autoday") >= 0;
 
     public GameState State => state;
     public bool IsPlaying => state == GameState.Playing;
@@ -93,6 +97,16 @@ public sealed class GameFlow : MonoBehaviour
 
     private void Update()
     {
+        // -autoday: 무인 장시간 테스트에서 결산 화면을 자동으로 넘긴다.
+        if (state == GameState.Settlement && AutoAdvanceDays)
+        {
+            autoAdvanceTimer -= Time.unscaledDeltaTime;
+            if (autoAdvanceTimer <= 0f && game != null && KitchenNetwork.IsHostSide)
+            {
+                game.StartNextDay();
+            }
+        }
+
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null)
         {
@@ -230,6 +244,7 @@ public sealed class GameFlow : MonoBehaviour
     public void EnterSettlement(string report)
     {
         Debug.Log("[Day] 결산 화면");
+        autoAdvanceTimer = 3f;
         state = GameState.Settlement;
         Time.timeScale = 0f;
         if (settlementText != null)

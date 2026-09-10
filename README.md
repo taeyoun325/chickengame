@@ -71,8 +71,9 @@ ChickenGame.exe -mode local -selftest -logFile selftest.log
 ChickenGame.exe -mode host -selftest -verbose -logFile selftest-host.log
 ```
 
-`-daylength 40` 으로 하루를 줄여 결산까지 빨리 확인할 수 있고, `-startday 6` 으로 후반
-DAY 상태를 바로 볼 수 있습니다. `-verbose` 는 스폰과 네트워크 진단 로그를 켭니다.
+`-daylength 40` 으로 하루를 줄이고, `-startday 6` 으로 후반 DAY 상태를 바로 볼 수 있습니다.
+`-autoday` 는 결산 화면을 자동으로 넘겨 무인 장시간 테스트를 돌릴 때 쓰고,
+`-verbose` 는 스폰과 네트워크 진단 로그를 켭니다.
 
 ## 멀티플레이
 
