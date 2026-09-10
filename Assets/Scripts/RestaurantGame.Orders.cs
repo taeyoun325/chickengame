@@ -47,7 +47,9 @@ public sealed partial class RestaurantGame
         streak++;
         bestStreak = Mathf.Max(bestStreak, streak);
         int payout = Mathf.RoundToInt((order.recipe.price + order.DeliveryFee * deliveryFeeMultiplier)
-                                      * Difficulty.PriceMultiplier(day) * Difficulty.ComboMultiplier(streak));
+                                      * Difficulty.PriceMultiplier(day)
+                                      * Difficulty.ComboMultiplier(streak)
+                                      * Difficulty.ReputationTip(reputation));
         revenue += payout;
         successfulOrders++;
         ChangeReputation(+2);
@@ -55,12 +57,12 @@ public sealed partial class RestaurantGame
         ShowMessage($"배달 완료! {order.address} +₩{payout:N0}");
     }
 
+    /// <summary>받지 않은 배달 요청이 사라지는 것은 기회를 놓친 것이지 사고가 아니다.
+    /// 예전에는 -5 평판에 실패 집계까지 해서, 배달을 안 하면 하루 만에 폐업했다.</summary>
     public void ReportDeliveryMissed(DeliveryOrder order)
     {
-        failedOrders++;
-        streak = 0;
-        ChangeReputation(-5);
-        ShowMessage($"배달 주문 취소! {order.address}");
+        ChangeReputation(-1);
+        ShowMessage($"배달 주문을 놓쳤습니다 - {order.address}");
     }
 
     private void CompleteOrder(PlayerInteraction actor)
@@ -88,7 +90,9 @@ public sealed partial class RestaurantGame
         int bonus = Mathf.RoundToInt(Mathf.Clamp(order.remainingTime, 0f, OrderPatience) * 100f);
         streak++;
         bestStreak = Mathf.Max(bestStreak, streak);
-        float multiplier = Difficulty.PriceMultiplier(day) * Difficulty.ComboMultiplier(streak);
+        float multiplier = Difficulty.PriceMultiplier(day)
+                           * Difficulty.ComboMultiplier(streak)
+                           * Difficulty.ReputationTip(reputation);
         int payout = Mathf.RoundToInt((order.recipe.price + bonus) * multiplier);
         revenue += payout;
         order.delivered++;
@@ -132,11 +136,12 @@ public sealed partial class RestaurantGame
         return best;
     }
 
-    private void CreateOrder()
+    /// <summary>만든 주문의 수량을 돌려준다. 다음 주문 간격을 정하는 데 쓴다.</summary>
+    private int CreateOrder()
     {
         if (activeOrders.Count >= MaxWaitingOrders)
         {
-            return;
+            return 1;
         }
 
         totalOrders++;
@@ -150,6 +155,7 @@ public sealed partial class RestaurantGame
         ShowMessage(quantity > 1
             ? $"주문 #{totalOrders} {recipe.displayName} x{quantity} 들어왔습니다!"
             : $"주문 #{totalOrders} {recipe.displayName} 들어왔습니다!");
+        return quantity;
     }
 
     private static Vector3 QueueSlot(int index)

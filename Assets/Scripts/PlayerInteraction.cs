@@ -9,6 +9,15 @@ public sealed class PlayerInteraction : MonoBehaviour
     private FoodItem heldFood;
     private GameObject extinguisher;
 
+    /// <summary>이 플레이어가 바를 소스. 스테이션이 아니라 사람이 고른다.
+    /// 스테이션에 두면 다른 사람이 바꿔 버려 엉뚱한 양념이 발린다.</summary>
+    public MenuKind SauceChoice { get; private set; } = MenuKind.Seasoned;
+
+    public void SetSauceChoice(MenuKind kind)
+    {
+        SauceChoice = kind;
+    }
+
     public FoodItem HeldFood => heldFood;
     public bool CarryingExtinguisher => extinguisher != null;
     public bool HandsFree => heldFood == null && extinguisher == null;
@@ -50,11 +59,11 @@ public sealed class PlayerInteraction : MonoBehaviour
 
         if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
         {
-            KitchenNetwork.Instance.RequestSauceCycle(station.Index);
+            KitchenNetwork.Instance.RequestSauceCycle();
         }
         else if (RestaurantGame.Instance != null)
         {
-            RestaurantGame.Instance.CycleSauce(station);
+            RestaurantGame.Instance.CycleSauce(this);
         }
     }
 

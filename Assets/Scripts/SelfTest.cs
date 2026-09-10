@@ -199,7 +199,7 @@ public sealed class SelfTest : MonoBehaviour
             Station sauce = FindStation(StationType.Sauce);
             if (sauce != null)
             {
-                sauce.sauceKind = wanted.kind;
+                actor.SetSauceChoice(wanted.kind);
                 game.InteractWithStation(actor, sauce);
             }
         }

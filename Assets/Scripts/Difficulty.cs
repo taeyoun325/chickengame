@@ -38,6 +38,37 @@ public static class Difficulty
         return Random.Range(1, max + 1);
     }
 
+    /// <summary>평판이 좋으면 손님이 더 자주 오고, 나쁘면 발길이 뜸해진다.
+    /// 평판이 매출에 직접 영향을 줘야 관리할 이유가 생긴다.</summary>
+    public static float ReputationOrderScale(int reputation)
+    {
+        float normalized = Mathf.Clamp01(reputation / 100f);
+        return Mathf.Lerp(1.45f, 0.85f, normalized);
+    }
+
+    /// <summary>평판이 좋으면 팁이 붙는다. 최대 +10%.</summary>
+    public static float ReputationTip(int reputation)
+    {
+        return 0.9f + Mathf.Clamp01(reputation / 100f) * 0.2f;
+    }
+
+    /// <summary>가게 등급. HUD 에 한 글자로 보여준다.</summary>
+    public static string ReputationGrade(int reputation)
+    {
+        if (reputation >= 90) return "S";
+        if (reputation >= 75) return "A";
+        if (reputation >= 55) return "B";
+        if (reputation >= 30) return "C";
+        return "D";
+    }
+
+    /// <summary>세트 주문이 나오면 다음 손님까지의 간격을 늘린다.
+    /// 수량과 간격이 함께 커져야 수요 곡선이 완만하게 오른다.</summary>
+    public static float QuantitySpacing(int quantity)
+    {
+        return 0.55f + 0.45f * Mathf.Max(1, quantity);
+    }
+
     /// <summary>연속 성공 보너스. 10연속이면 2배.</summary>
     public static float ComboMultiplier(int streak)
     {

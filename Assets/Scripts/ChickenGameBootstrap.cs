@@ -49,8 +49,8 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     private void RegisterReserveFryers(RestaurantGame game)
     {
         // 예비 튀김기도 켜지면 바로 김이 오르도록 파티클을 미리 붙여둔다.
-        game.RegisterReserveFryer(AddSteam(CreateStation("Fryer 2", StationType.Fryer, new Vector3(-4f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f))).gameObject);
         game.RegisterReserveFryer(AddSteam(CreateStation("Fryer 3", StationType.Fryer, new Vector3(-1f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f))).gameObject);
+        game.RegisterReserveFryer(AddSteam(CreateStation("Fryer 4", StationType.Fryer, new Vector3(-4f, 0.8f, 1f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f))).gameObject);
     }
 
     private static Station AddSteam(Station station)
@@ -89,7 +89,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateBlock("Front Wall Right", new Vector3(5.75f, 2f, -6f), new Vector3(6.5f, 4f, 0.5f), new Color(0.38f, 0.18f, 0.12f));
         // 조리 라인은 뒷줄, 손님을 상대하는 카운터는 앞줄. 스테이션끼리는 최소 3m 떨어뜨려
         // 상호작용 반경(2.4m)이 겹치지 않게 한다.
+        // 2~4인 협동이므로 튀김기는 처음부터 두 대. 한 대뿐이면 두 번째 플레이어가 할 일이 없다.
         AddSteam(CreateStation("Fryer", StationType.Fryer, new Vector3(-7f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)));
+        AddSteam(CreateStation("Fryer 2", StationType.Fryer, new Vector3(-4f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)));
         CreateStation("Sauce Table", StationType.Sauce, new Vector3(2f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.75f, 0.2f, 0.3f));
         CreateStation("Fridge", StationType.Fridge, new Vector3(5f, 1.5f, 4.2f), new Vector3(2f, 3f, 2f), new Color(0.35f, 0.7f, 0.8f));
         CreateStation("Upgrade Desk", StationType.Upgrade, new Vector3(8f, 0.8f, 4.2f), new Vector3(1.5f, 1.6f, 2.5f), new Color(0.55f, 0.35f, 0.8f));

@@ -81,9 +81,9 @@ public sealed class KitchenNetwork : NetworkBehaviour
         DropRpc(NetworkManager.Singleton.LocalClientId);
     }
 
-    public void RequestSauceCycle(int stationIndex)
+    public void RequestSauceCycle()
     {
-        SauceRpc(stationIndex);
+        SauceRpc(NetworkManager.Singleton.LocalClientId);
     }
 
     public void RequestUpgrade(int slot)
@@ -123,12 +123,12 @@ public sealed class KitchenNetwork : NetworkBehaviour
     }
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    private void SauceRpc(int stationIndex)
+    private void SauceRpc(ulong clientId)
     {
-        Station station = WorldRegistry.StationAt(stationIndex);
-        if (station != null && station.stationType == StationType.Sauce && RestaurantGame.Instance != null)
+        PlayerInteraction actor = FindActor(clientId);
+        if (actor != null && RestaurantGame.Instance != null)
         {
-            RestaurantGame.Instance.CycleSauce(station);
+            RestaurantGame.Instance.CycleSauce(actor);
         }
     }
 

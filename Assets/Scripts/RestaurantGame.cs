@@ -37,6 +37,10 @@ public sealed partial class RestaurantGame : MonoBehaviour
     private const float BaseOrderInterval = 12f;
     private const float OrderPatience = 45f;
     private const float BaseFryTime = 5f;
+
+    /// <summary>익은 뒤 탈 때까지의 여유. 튀김기를 업그레이드해도 이 여유는 유지된다.
+    /// 예전에는 burnTime 이 fryTime 에 비례해서, 최대 업그레이드 시 여유가 1.8초까지 줄었다.</summary>
+    private const float BurnGrace = 3f;
     private const int MaxWaitingOrders = 5;
     private const int MaxReputation = 100;
     private static readonly Vector3 DoorPoint = new Vector3(0f, 0.9f, -8f);
@@ -78,7 +82,7 @@ public sealed partial class RestaurantGame : MonoBehaviour
     private UpgradeSystem upgrades;
     private readonly List<GameObject> reserveFryers = new List<GameObject>();
     private float fryTime = BaseFryTime;
-    private float burnTime = BaseFryTime * 1.6f;
+    private float burnTime = BaseFryTime + BurnGrace;
     private float orderInterval = BaseOrderInterval;
     private float orderIntervalMultiplier = 1f;
     private float patienceMultiplier = 1f;
@@ -92,6 +96,9 @@ public sealed partial class RestaurantGame : MonoBehaviour
     public int Revenue => revenue;
     public int Reputation => reputation;
     public int Streak => streak;
+
+    /// <summary>현재 튀김 시간. 검증 하네스가 대기 시간을 맞추는 데 쓴다.</summary>
+    public float FryTime => fryTime;
 
     /// <summary>업그레이드로 쓴 돈까지 포함한 실제 벌어들인 총액.</summary>
     public int GrossEarned => revenue + spending;
@@ -163,12 +170,18 @@ public sealed partial class RestaurantGame : MonoBehaviour
 
         if (orderTimer <= 0f)
         {
+            int createdQuantity = 1;
             if (AutoOrdersEnabled)
             {
-                CreateOrder();
+                createdQuantity = CreateOrder();
             }
 
-            orderTimer = Difficulty.OrderInterval(orderInterval, day) * orderIntervalMultiplier;
+            // 세트 주문이 나오면 그만큼 다음 손님을 늦게 보낸다. 수량만 두 배가 되고
+            // 간격이 그대로면 DAY 3 에서 수요가 하루아침에 두 배로 뛴다.
+            orderTimer = Difficulty.OrderInterval(orderInterval, day)
+                         * orderIntervalMultiplier
+                         * Difficulty.ReputationOrderScale(reputation)
+                         * Difficulty.QuantitySpacing(createdQuantity);
         }
 
         tagTimer -= Time.deltaTime;
@@ -199,7 +212,7 @@ public sealed partial class RestaurantGame : MonoBehaviour
             {
                 failedOrders++;
                 streak = 0;
-                ChangeReputation(-8);
+                ChangeReputation(-6);
                 SendCustomerHome(order);
                 activeOrders.RemoveAt(index);
                 queueChanged = true;
@@ -440,7 +453,7 @@ public sealed partial class RestaurantGame : MonoBehaviour
 
         if (statsLabel != null)
         {
-            statsLabel.text = $"평판 {reputation}/{MaxReputation}   콤보 x{Difficulty.ComboMultiplier(streak):0.0}   주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}" + (delivery != null ? $"  배달 {delivery.CompletedDeliveries}" : string.Empty);
+            statsLabel.text = $"평판 {reputation} {Difficulty.ReputationGrade(reputation)}   콤보 x{Difficulty.ComboMultiplier(streak):0.0}   주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}" + (delivery != null ? $"  배달 {delivery.CompletedDeliveries}" : string.Empty);
         }
     }
 }

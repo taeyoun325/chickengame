@@ -162,17 +162,17 @@ public sealed partial class RestaurantGame
             return;
         }
 
-        MenuRecipe recipe = MenuDatabase.Get(station.sauceKind);
+        MenuRecipe recipe = MenuDatabase.Get(actor.SauceChoice);
         food.sauced = true;
         food.SetRecipe(recipe);
         ShowMessage($"{recipe.displayName} 양념 완료!");
     }
 
     /// <summary>양념대에서 바를 소스를 바꾼다.</summary>
-    public void CycleSauce(Station station)
+    public void CycleSauce(PlayerInteraction actor)
     {
-        station.sauceKind = station.sauceKind == MenuKind.Seasoned ? MenuKind.Soy : MenuKind.Seasoned;
-        ShowMessage($"양념대: {MenuDatabase.Get(station.sauceKind).displayName}");
+        actor.SetSauceChoice(actor.SauceChoice == MenuKind.Seasoned ? MenuKind.Soy : MenuKind.Seasoned);
+        ShowMessage($"소스 선택: {MenuDatabase.Get(actor.SauceChoice).displayName}");
     }
 
     private void PackChicken(PlayerInteraction actor)

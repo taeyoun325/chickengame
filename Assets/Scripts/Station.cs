@@ -17,9 +17,6 @@ public sealed class Station : MonoBehaviour
 {
     public StationType stationType;
 
-    /// <summary>양념대는 어떤 소스를 바르는지에 따라 최종 메뉴가 결정된다.</summary>
-    public MenuKind sauceKind = MenuKind.Seasoned;
-
     /// <summary>네트워크 RPC 가 스테이션을 가리킬 때 쓰는 고정 인덱스.</summary>
     public int Index { get; set; } = -1;
 

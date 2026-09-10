@@ -107,7 +107,7 @@ public sealed class StationLabel : MonoBehaviour
                 return "생닭 필요";
             case StationType.Sauce:
                 return held != null && held.state == FoodState.Cooked
-                    ? $"{MenuDatabase.Get(station.sauceKind).displayName} 바르기 (소스 전환 키로 변경)"
+                    ? $"{MenuDatabase.Get(actor.SauceChoice).displayName} 바르기 (소스 전환 키로 변경)"
                     : "튀긴 치킨 필요";
             case StationType.Packing:
                 return held != null && held.ReadyToPack ? "포장하기" : "익은 치킨 필요";

@@ -25,6 +25,17 @@ public sealed partial class RestaurantGame
         int dayOrders = totalOrders - dayStartOrders;
         int daySuccess = successfulOrders - dayStartSuccess;
         int dayFailed = failedOrders - dayStartFailed;
+
+        // 하루를 잘 마치면 평판이 회복된다. 회복 수단이 없으면 한 번 무너진 가게는 끝이었다.
+        int recovered = 0;
+        if (daySuccess + dayFailed > 0 && daySuccess >= (daySuccess + dayFailed) * 0.6f)
+        {
+            recovered = Mathf.Min(15, MaxReputation - reputation);
+            if (recovered > 0)
+            {
+                ChangeReputation(recovered);
+            }
+        }
         float progress = revenue / (float)TargetRevenue * 100f;
 
         StringBuilder text = new StringBuilder();
@@ -38,7 +49,12 @@ public sealed partial class RestaurantGame
             text.AppendLine($"미끄러짐 {hazards.SlipCount}회   화재 {hazards.FireCount}회");
         }
 
-        text.AppendLine($"최고 콤보 {bestStreak}연속   평판 {reputation}/{MaxReputation}");
+        text.AppendLine($"최고 콤보 {bestStreak}연속   평판 {reputation}/{MaxReputation} ({Difficulty.ReputationGrade(reputation)})");
+        if (recovered > 0)
+        {
+            text.AppendLine($"오늘 성적이 좋아 평판 +{recovered}");
+        }
+
         text.AppendLine($"업그레이드 지출  ₩{spending:N0}");
         text.AppendLine($"내일 단가 배율   x{Difficulty.PriceMultiplier(day + 1):0.0}");
         text.AppendLine();
@@ -164,7 +180,7 @@ public sealed partial class RestaurantGame
         }
 
         fryTime = BaseFryTime * Mathf.Pow(0.88f, upgrades.LevelOf(UpgradeKind.FryerSpeed));
-        burnTime = fryTime * 1.6f;
+        burnTime = fryTime + BurnGrace;
         orderInterval = BaseOrderInterval * Mathf.Pow(0.9f, upgrades.LevelOf(UpgradeKind.Marketing));
         GameTuning.PlayerSpeedMultiplier = Mathf.Pow(1.12f, upgrades.LevelOf(UpgradeKind.MoveSpeed));
         GameTuning.DeliverySpeedMultiplier = Mathf.Pow(0.85f, upgrades.LevelOf(UpgradeKind.ScooterSpeed));
@@ -262,6 +278,7 @@ public sealed partial class RestaurantGame
         }
 
         finished = true;
+        Debug.Log($"[Day] 게임 종료 - {(won ? "승리" : "폐업")}, 평판 {reputation}, 매출 {revenue}");
         StringBuilder text = new StringBuilder();
         text.AppendLine(won ? "목표 달성! 치킨 재벌" : "평판 0 - 폐업했습니다");
         text.AppendLine();
