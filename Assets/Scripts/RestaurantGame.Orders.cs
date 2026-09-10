@@ -59,6 +59,16 @@ public sealed partial class RestaurantGame
 
     /// <summary>받지 않은 배달 요청이 사라지는 것은 기회를 놓친 것이지 사고가 아니다.
     /// 예전에는 -5 평판에 실패 집계까지 해서, 배달을 안 하면 하루 만에 폐업했다.</summary>
+    /// <summary>배달 중 사고. 음식은 이미 손을 떠났으므로 돈은 못 받고 평판만 깎인다.
+    /// 놓친 주문보다 아프지만 폐업으로 직행할 만큼은 아니어야 수습이 가능하다.</summary>
+    public void ReportDeliveryCrashed(DeliveryOrder order)
+    {
+        streak = 0;
+        ChangeReputation(-3);
+        PlaySound(GameSound.Fail);
+        ShowMessage($"배달 사고! {order.address} - 치킨을 쏟았습니다");
+    }
+
     public void ReportDeliveryMissed(DeliveryOrder order)
     {
         ChangeReputation(-1);

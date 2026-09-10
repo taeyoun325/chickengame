@@ -13,6 +13,9 @@ public sealed class DeliveryOrder
     public bool dispatched;
     public float rideTimer;
 
+    /// <summary>이번 배달이 사고로 끝나는지. 출발할 때 정해진다.</summary>
+    public bool crashed;
+
     public DeliveryOrder(int orderNumber, MenuRecipe orderRecipe, string deliveryAddress, float deliveryDistance, float acceptWindow)
     {
         number = orderNumber;
@@ -26,6 +29,12 @@ public sealed class DeliveryOrder
     public int DeliveryFee => 3_000 + Mathf.RoundToInt(distance * 800f);
 
     public float RideTime => 6f + distance * 2.5f;
+
+    /// <summary>먼 집일수록 사고가 잦다. 이게 없으면 먼 주문이 배달비만 비싼
+    /// 공짜 이득이 되어 가까운 주문을 받을 이유가 사라진다.
+    /// 스쿠터 튜닝은 시간뿐 아니라 위험도 함께 줄여준다.</summary>
+    public float CrashChance =>
+        Mathf.Clamp(0.04f + distance * 0.03f, 0f, 0.25f) * GameTuning.DeliverySpeedMultiplier;
 }
 
 /// <summary>배달대에 포장을 올리면 스쿠터가 출발하고, 돌아오면 매출이 들어온다.</summary>
@@ -47,6 +56,7 @@ public sealed class DeliverySystem : MonoBehaviour
     private Vector3 scooterHome;
     private float requestTimer = 25f;
     private int nextNumber = 1;
+    private bool forceCrash;
 
     public int PendingCount => pending.Count;
 
@@ -61,6 +71,14 @@ public sealed class DeliverySystem : MonoBehaviour
     public int RidingCount => riding.Count;
     public int CompletedDeliveries { get; private set; }
     public int MissedDeliveries { get; private set; }
+    public int CrashedDeliveries { get; private set; }
+
+    /// <summary>자동 검증에서 다음 출발을 반드시 사고로 만든다.
+    /// 확률에 기대면 검증이 어떤 날은 통과하고 어떤 날은 실패한다.</summary>
+    public void ForceNextRideCrash()
+    {
+        forceCrash = true;
+    }
 
     public void Initialise(RestaurantGame restaurantGame, Transform scooterTransform)
     {
@@ -115,6 +133,13 @@ public sealed class DeliverySystem : MonoBehaviour
             }
 
             riding.RemoveAt(index);
+            if (order.crashed)
+            {
+                CrashedDeliveries++;
+                game.ReportDeliveryCrashed(order);
+                continue;
+            }
+
             CompletedDeliveries++;
             game.ReportDeliveryComplete(order);
         }
@@ -158,7 +183,12 @@ public sealed class DeliverySystem : MonoBehaviour
     {
         pending.Remove(order);
         order.dispatched = true;
-        order.rideTimer = order.RideTime * GameTuning.DeliverySpeedMultiplier;
+        order.crashed = forceCrash || Random.value < order.CrashChance;
+        forceCrash = false;
+
+        // 사고가 나면 중간에서 돌아오므로 스쿠터가 더 빨리 보인다.
+        float ride = order.RideTime * GameTuning.DeliverySpeedMultiplier;
+        order.rideTimer = order.crashed ? ride * 0.5f : ride;
         riding.Add(order);
     }
 

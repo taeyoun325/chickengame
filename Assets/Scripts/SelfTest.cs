@@ -177,6 +177,49 @@ public sealed class SelfTest : MonoBehaviour
         game.InteractWithStation(actor, FindStation(StationType.Delivery));
         Check(actor.HeldFood == null, "배달대에 넘겼다");
         Check(deliverySystem.RidingCount == ridingBefore + 1, "스쿠터가 출발했다");
+
+        yield return TestDeliveryCrash(game, actor, deliverySystem);
+    }
+
+    /// <summary>배달 중 사고. 먼 주문이 배달비만 비싼 공짜 이득이 되지 않으려면
+    /// 실제로 돈을 못 받고 평판이 깎여야 한다.</summary>
+    private IEnumerator TestDeliveryCrash(RestaurantGame game, PlayerInteraction actor, DeliverySystem deliverySystem)
+    {
+        // 앞선 배달이 돌아오는 중이면 그 매출이 섞여 사고의 결과를 가릴 수 없다.
+        float wait = 0f;
+        while (deliverySystem.RidingCount > 0 && wait < 40f)
+        {
+            wait += Time.deltaTime;
+            yield return null;
+        }
+
+        Check(deliverySystem.RidingCount == 0, "앞선 배달이 모두 돌아왔다");
+
+        ClearHands(game, actor);
+        deliverySystem.ForceRequest();
+        if (deliverySystem.PendingCount == 0)
+        {
+            Check(false, "사고를 시험할 배달 주문이 있다");
+            yield break;
+        }
+
+        MenuRecipe wanted = deliverySystem.Pending[0].recipe;
+        yield return MakeMenu(game, actor, wanted);
+
+        int revenueBefore = game.Revenue;
+        int reputationBefore = game.Reputation;
+        int crashedBefore = deliverySystem.CrashedDeliveries;
+
+        deliverySystem.ForceNextRideCrash();
+        game.InteractWithStation(actor, FindStation(StationType.Delivery));
+
+        // 사고는 왕복의 절반 지점에서 드러난다.
+        yield return new WaitForSeconds(12f);
+
+        Check(deliverySystem.CrashedDeliveries == crashedBefore + 1, "배달이 사고로 끝났다");
+        Check(game.Revenue == revenueBefore, "사고 난 배달은 돈을 못 받는다");
+        Check(game.Reputation < reputationBefore,
+            $"배달 사고로 평판이 깎인다 ({reputationBefore} → {game.Reputation})");
     }
 
     /// <summary>돈이 없으면 업그레이드가 팔리지 않아야 한다.</summary>
