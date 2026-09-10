@@ -292,15 +292,85 @@ public sealed partial class RestaurantGame
         }
 
         text.AppendLine();
-        text.AppendLine("SPACE 를 눌러 처음부터");
 
         if (won)
         {
+            text.AppendLine("SPACE 를 눌러 처음부터");
             GameFlow.Instance.EnterVictory(text.ToString());
+            BroadcastFinish(text.ToString(), true);
+            return;
         }
-        else
+
+        text.AppendLine(DiagnoseClosure());
+        text.AppendLine();
+        text.AppendLine($"R  재기하기 (매출 {ReopenPenaltyPercent}% 벌금, 업그레이드는 유지)");
+        text.AppendLine("SPACE  처음부터");
+        GameFlow.Instance.EnterDefeat(text.ToString());
+        BroadcastFinish(text.ToString(), false);
+    }
+
+    private static void BroadcastFinish(string report, bool won)
+    {
+        if (KitchenNetwork.Online && KitchenNetwork.Instance.IsServer)
         {
-            GameFlow.Instance.EnterDefeat(text.ToString());
+            KitchenNetwork.Instance.BroadcastFinish(report, won);
         }
+    }
+
+    /// <summary>무엇 때문에 망했는지 한 줄로 알려준다. 그냥 문 닫았다고만 하면 배울 것이 없다.</summary>
+    private string DiagnoseClosure()
+    {
+        int fires = hazards != null ? hazards.FireCount : 0;
+        if (failedOrders >= burntChicken && failedOrders >= fires)
+        {
+            return $"놓친 주문 {failedOrders}건이 가장 크게 깎았습니다. 손이 모자라면 급한 손님부터 처리하세요.";
+        }
+
+        if (burntChicken >= fires)
+        {
+            return $"탄 치킨 {burntChicken}마리가 발목을 잡았습니다. 익으면 바로 꺼내세요.";
+        }
+
+        return $"화재 {fires}번이 결정적이었습니다. 탄 치킨을 튀김기에 두지 마세요.";
+    }
+
+    /// <summary>재기: 업그레이드와 DAY 는 남기고 평판을 절반으로 되돌린다.
+    /// 며칠치 진행이 한 번에 날아가면 다시 앉을 마음이 들지 않는다.</summary>
+    public void Reopen()
+    {
+        int fine = Mathf.RoundToInt(revenue * (ReopenPenaltyPercent / 100f));
+        revenue = Mathf.Max(0, revenue - fine);
+        spending += fine;
+        reopenCount++;
+        reputation = 50;
+        finished = false;
+        streak = 0;
+
+        // 밀린 주문은 정리하고 다시 연다.
+        for (int index = activeOrders.Count - 1; index >= 0; index--)
+        {
+            SendCustomerHome(activeOrders[index]);
+            activeOrders.RemoveAt(index);
+        }
+
+        dayTimer = 0f;
+        orderTimer = 6f;
+        dayStartNetRevenue = revenue + spending;
+        dayStartOrders = totalOrders;
+        dayStartSuccess = successfulOrders;
+        dayStartFailed = failedOrders;
+
+        if (GameFlow.Instance != null)
+        {
+            GameFlow.Instance.ResumeFromSettlement();
+        }
+
+        if (KitchenNetwork.Online && KitchenNetwork.Instance.IsServer)
+        {
+            KitchenNetwork.Instance.BroadcastResume();
+        }
+
+        Debug.Log($"[Day] 재기 - 벌금 {fine}, 평판 50");
+        ShowMessage($"재기! 벌금 ₩{fine:N0}, 평판 50에서 다시 시작합니다");
     }
 }

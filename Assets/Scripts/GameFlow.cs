@@ -172,10 +172,20 @@ public sealed class GameFlow : MonoBehaviour
 
                 break;
             case GameState.Victory:
+                if (keyboard.spaceKey.wasPressedThisFrame)
+                {
+                    Restart();
+                }
+
+                break;
             case GameState.Defeat:
                 if (keyboard.spaceKey.wasPressedThisFrame)
                 {
                     Restart();
+                }
+                else if (keyboard.rKey.wasPressedThisFrame && game != null && KitchenNetwork.IsHostSide)
+                {
+                    game.Reopen();
                 }
 
                 break;

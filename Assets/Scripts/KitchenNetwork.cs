@@ -166,6 +166,41 @@ public sealed class KitchenNetwork : NetworkBehaviour
         }
     }
 
+    /// <summary>승패도 결산처럼 모두에게 보여야 한다. 호스트만 결과 화면을 보면
+    /// 접속한 사람은 아무 설명 없이 멈춘 가게를 보게 된다.</summary>
+    public void BroadcastFinish(string report, bool won)
+    {
+        if (!IsServer || !IsSpawned)
+        {
+            return;
+        }
+
+        if (report.Length > 900)
+        {
+            report = report.Substring(0, 900);
+        }
+
+        FinishRpc(new FixedString4096Bytes(report), won);
+    }
+
+    [Rpc(SendTo.NotServer)]
+    private void FinishRpc(FixedString4096Bytes report, bool won)
+    {
+        if (GameFlow.Instance == null)
+        {
+            return;
+        }
+
+        if (won)
+        {
+            GameFlow.Instance.EnterVictory(report.ToString());
+        }
+        else
+        {
+            GameFlow.Instance.EnterDefeat(report.ToString());
+        }
+    }
+
     public void BroadcastResume()
     {
         if (IsServer && IsSpawned)

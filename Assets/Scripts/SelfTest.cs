@@ -38,6 +38,7 @@ public sealed class SelfTest : MonoBehaviour
         yield return TestOrderCheckout(game);
         yield return TestDelivery(game);
         TestUpgradeRules(game);
+        TestClosureAndReopen(game);
 
         game.AutoOrdersEnabled = true;
         Report();
@@ -183,6 +184,21 @@ public sealed class SelfTest : MonoBehaviour
         game.BuyUpgrade(0);
         bool affordable = revenue >= 120_000;
         Check(affordable || game.Revenue == revenue, "자금이 모자라면 결제되지 않는다");
+    }
+
+    /// <summary>평판이 0 이 되면 폐업하고, 재기하면 다시 영업할 수 있어야 한다.</summary>
+    private void TestClosureAndReopen(RestaurantGame game)
+    {
+        int revenueBefore = game.Revenue;
+
+        game.ChangeReputation(-200);
+        Check(GameFlow.Instance != null && GameFlow.Instance.State == GameState.Defeat,
+            $"평판 0 이면 폐업한다 (현재 {(GameFlow.Instance != null ? GameFlow.Instance.State.ToString() : "없음")})");
+
+        game.Reopen();
+        Check(game.Reputation == 50, $"재기하면 평판이 50 이 된다 (현재 {game.Reputation})");
+        Check(game.Revenue <= revenueBefore, $"재기 벌금이 매출에서 빠진다 ({revenueBefore} → {game.Revenue})");
+        Check(GameFlow.Instance != null && GameFlow.Instance.IsPlaying, "재기하면 다시 영업 상태가 된다");
     }
 
     /// <summary>원하는 메뉴 하나를 처음부터 포장까지 만든다.</summary>

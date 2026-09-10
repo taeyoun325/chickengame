@@ -45,6 +45,9 @@ public sealed partial class RestaurantGame : MonoBehaviour
     private const float BurnGrace = 3f;
     private const int MaxWaitingOrders = 5;
     private const int MaxReputation = 100;
+
+    /// <summary>재기할 때마다 매출에서 떼는 비율. 거듭할수록 아프게 한다.</summary>
+    private int ReopenPenaltyPercent => Mathf.Min(60, 20 + reopenCount * 15);
     private static readonly Vector3 DoorPoint = new Vector3(0f, 0.9f, -8f);
     private static readonly Vector3 ExitPoint = new Vector3(0f, 0.9f, -10f);
 
@@ -63,6 +66,7 @@ public sealed partial class RestaurantGame : MonoBehaviour
     private int bestDayRevenue;
     private int bestDay;
     private bool finished;
+    private int reopenCount;
     private HazardSystem hazards;
     private int dayStartNetRevenue;
     private int dayStartOrders;
