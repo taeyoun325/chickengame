@@ -229,6 +229,10 @@ public sealed class PlayerInteraction : MonoBehaviour
         }
     }
 
+    /// <summary>발밑에 기름이 있고 손이 비었을 때만 닦는다. 손에 뭘 들고 있으면
+    /// 평소대로 스테이션과 상호작용하므로, 기름이 조리 동선을 가로막지 않는다.</summary>
+    public bool CanClean => HandsFree && OilPuddle.Covering(transform.position) != null;
+
     public void Interact()
     {
         if (RestaurantGame.Instance == null)
@@ -236,15 +240,40 @@ public sealed class PlayerInteraction : MonoBehaviour
             return;
         }
 
-        if (extinguisher != null && RestaurantGame.Instance.TryExtinguishNearby(transform.position))
+        bool client = KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer;
+
+        if (extinguisher != null)
         {
+            if (client)
+            {
+                KitchenNetwork.Instance.RequestExtinguish();
+                return;
+            }
+
+            if (RestaurantGame.Instance.TryExtinguishNearby(transform.position))
+            {
+                return;
+            }
+        }
+
+        if (CanClean)
+        {
+            if (client)
+            {
+                KitchenNetwork.Instance.RequestClean();
+            }
+            else
+            {
+                RestaurantGame.Instance.TryCleanNearby(transform.position);
+            }
+
             return;
         }
 
         Station station = FindNearbyStation();
 
         // 접속한 손님이면 호스트에 요청하고, 호스트/싱글이면 바로 처리한다.
-        if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
+        if (client)
         {
             if (station != null)
             {

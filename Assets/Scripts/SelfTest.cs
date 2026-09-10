@@ -39,6 +39,7 @@ public sealed class SelfTest : MonoBehaviour
         yield return TestOrderCheckout(game);
         yield return TestDelivery(game);
         TestUpgradeRules(game);
+        TestCleaning(game);
         TestClosureAndReopen(game);
         TestVictory(game);
 
@@ -186,6 +187,26 @@ public sealed class SelfTest : MonoBehaviour
         game.BuyUpgrade(0);
         bool affordable = revenue >= 120_000;
         Check(affordable || game.Revenue == revenue, "자금이 모자라면 결제되지 않는다");
+    }
+
+    /// <summary>사고는 사람 손으로 수습할 수 있어야 한다. 기름을 저절로 마르기만
+    /// 기다려야 한다면 미끄러짐은 그냥 당하는 일이 된다.</summary>
+    private void TestCleaning(RestaurantGame game)
+    {
+        PlayerInteraction actor = WorldRegistry.Players.Count > 0 ? WorldRegistry.Players[0] : null;
+        if (actor == null)
+        {
+            Check(false, "청소를 시험할 플레이어가 있다");
+            return;
+        }
+
+        actor.DropEverything();
+        game.SpillOilAt(actor.transform.position);
+        Check(OilPuddle.Covering(actor.transform.position) != null, "발밑에 기름이 생겼다");
+        Check(actor.CanClean, "손이 비어 있으면 닦을 수 있다고 알려준다");
+
+        Check(game.TryCleanNearby(actor.transform.position), "기름을 닦았다");
+        Check(OilPuddle.Covering(actor.transform.position) == null, "닦은 자리에 기름이 없다");
     }
 
     /// <summary>평판이 0 이 되면 폐업하고, 재기하면 다시 영업할 수 있어야 한다.</summary>

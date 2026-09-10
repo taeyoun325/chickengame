@@ -6,6 +6,27 @@ using UnityEngine.UI;
 /// <summary>주방 조리와 스테이션 상호작용. RestaurantGame 의 일부다.</summary>
 public sealed partial class RestaurantGame
 {
+    /// <summary>정해진 자리에 기름을 쏟는다.</summary>
+    public void SpillOilAt(Vector3 position)
+    {
+        if (hazards != null)
+        {
+            hazards.SpillOilAt(position);
+        }
+    }
+
+    /// <summary>기름 닦기. 호스트에서만 실제로 지워진다.</summary>
+    public bool TryCleanNearby(Vector3 position)
+    {
+        if (hazards == null || !hazards.TryClean(position))
+        {
+            return false;
+        }
+
+        ShowMessage("기름을 닦았습니다");
+        return true;
+    }
+
     public bool TryExtinguishNearby(Vector3 position)
     {
         if (hazards == null || !hazards.TryExtinguish(position))

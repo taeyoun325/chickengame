@@ -86,6 +86,18 @@ public sealed class KitchenNetwork : NetworkBehaviour
         SauceRpc(NetworkManager.Singleton.LocalClientId);
     }
 
+    /// <summary>불을 끄고 기름을 닦는 일도 호스트가 처리해야 한다. 접속한 플레이어가
+    /// 자기 화면에서 지워봐야 호스트의 사고는 그대로 남는다.</summary>
+    public void RequestExtinguish()
+    {
+        ExtinguishRpc(NetworkManager.Singleton.LocalClientId);
+    }
+
+    public void RequestClean()
+    {
+        CleanRpc(NetworkManager.Singleton.LocalClientId);
+    }
+
     public void RequestUpgrade(int slot)
     {
         UpgradeRpc(slot);
@@ -119,6 +131,26 @@ public sealed class KitchenNetwork : NetworkBehaviour
         if (actor != null)
         {
             actor.DropEverything();
+        }
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void ExtinguishRpc(ulong clientId)
+    {
+        PlayerInteraction actor = FindActor(clientId);
+        if (actor != null && actor.CarryingExtinguisher && RestaurantGame.Instance != null)
+        {
+            RestaurantGame.Instance.TryExtinguishNearby(actor.transform.position);
+        }
+    }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void CleanRpc(ulong clientId)
+    {
+        PlayerInteraction actor = FindActor(clientId);
+        if (actor != null && actor.HandsFree && RestaurantGame.Instance != null)
+        {
+            RestaurantGame.Instance.TryCleanNearby(actor.transform.position);
         }
     }
 

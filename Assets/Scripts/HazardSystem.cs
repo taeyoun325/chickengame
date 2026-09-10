@@ -75,6 +75,13 @@ public sealed class HazardSystem : MonoBehaviour
         }
 
         Vector3 spot = fryer.transform.position + new Vector3(Random.Range(-2.5f, 2.5f), 0f, Random.Range(-3f, -1f));
+        SpillOilAt(spot);
+    }
+
+    /// <summary>정해진 자리에 기름을 쏟는다. 튀김기에서 튀는 경우 말고도
+    /// 떨어뜨린 음식처럼 다른 사고에서 불러 쓸 수 있어야 한다.</summary>
+    public void SpillOilAt(Vector3 spot)
+    {
         spot.y = 0.02f;
         GameObject puddleObject = NetworkSpawner.SpawnHazard(
             "NetworkOil", PrimitiveType.Cylinder, spot,
@@ -169,6 +176,21 @@ public sealed class HazardSystem : MonoBehaviour
     }
 
     /// <summary>소화기를 든 플레이어가 근처 불을 끈다.</summary>
+    /// <summary>발밑의 기름을 닦는다. 사고가 나도 사람 손으로 되돌릴 수 있어야
+    /// 미끄러짐이 그냥 당하는 일이 아니라 수습할 수 있는 일이 된다.</summary>
+    public bool TryClean(Vector3 position)
+    {
+        OilPuddle puddle = OilPuddle.Covering(position);
+        if (puddle == null)
+        {
+            return false;
+        }
+
+        puddles.Remove(puddle);
+        puddle.Remove();
+        return true;
+    }
+
     public bool TryExtinguish(Vector3 position)
     {
         for (int index = fires.Count - 1; index >= 0; index--)

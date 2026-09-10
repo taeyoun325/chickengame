@@ -38,6 +38,19 @@ public sealed class AimHud : MonoBehaviour
 
         SetText(hands, HandsText(actor));
 
+        // 발밑의 기름이 스테이션보다 급하다. 밟고 선 채로 안내가 안 뜨면
+        // 닦을 수 있다는 걸 알 방법이 없다.
+        if (actor.CanClean)
+        {
+            if (crosshair != null)
+            {
+                crosshair.color = TargetColor;
+            }
+
+            SetText(prompt, "[E]  기름 닦기");
+            return;
+        }
+
         Station target = PlayerInteraction.AimedStation;
         if (target == null)
         {
