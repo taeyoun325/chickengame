@@ -59,6 +59,8 @@ public sealed class NetworkSession : MonoBehaviour
         RegisterPrefab("NetworkFood");
         RegisterPrefab("NetworkCustomer");
         RegisterPrefab("KitchenNetwork");
+        RegisterPrefab("NetworkOil");
+        RegisterPrefab("NetworkFire");
         manager.OnClientConnectedCallback += OnClientConnected;
         manager.OnClientDisconnectCallback += OnClientDisconnected;
         return true;

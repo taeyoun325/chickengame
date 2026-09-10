@@ -179,6 +179,7 @@ public sealed class RestaurantGame : MonoBehaviour
             messageLabel.text = string.Empty;
         }
 
+        TickAllFood(Time.deltaTime);
         CheckVictory();
         UpdateHud();
         PublishNetworkState();
@@ -690,6 +691,20 @@ public sealed class RestaurantGame : MonoBehaviour
         messageTimer = 3f;
     }
 
+    /// <summary>조리는 호스트가 등록된 음식들을 직접 돌린다.
+    /// 프리팹에 붙는 별도 컴포넌트를 두면 직렬화가 깨질 여지가 있어 한곳에서 처리한다.</summary>
+    private void TickAllFood(float deltaTime)
+    {
+        for (int index = 0; index < WorldRegistry.Foods.Count; index++)
+        {
+            FoodItem food = WorldRegistry.Foods[index];
+            if (food != null)
+            {
+                TickFood(food, deltaTime);
+            }
+        }
+    }
+
     public void TickFood(FoodItem food, float deltaTime)
     {
         if (food.state != FoodState.Frying || !powerOn)
@@ -974,30 +989,6 @@ public sealed class RestaurantGame : MonoBehaviour
         if (statsLabel != null)
         {
             statsLabel.text = $"평판 {reputation}/{MaxReputation}   콤보 x{Difficulty.ComboMultiplier(streak):0.0}   주문 {totalOrders}  성공 {successfulOrders}  실패 {failedOrders}  탄 치킨 {burntChicken}" + (delivery != null ? $"  배달 {delivery.CompletedDeliveries}" : string.Empty);
-        }
-    }
-}
-
-public sealed class FoodTickProxy : MonoBehaviour
-{
-    private FoodItem food;
-
-    private void Awake()
-    {
-        food = GetComponent<FoodItem>();
-    }
-
-    private void Update()
-    {
-        // 조리 진행은 호스트만 계산한다. 클라이언트는 FoodSync 가 보내주는 상태만 본다.
-        if (!KitchenNetwork.IsHostSide)
-        {
-            return;
-        }
-
-        if (RestaurantGame.Instance != null && food != null)
-        {
-            RestaurantGame.Instance.TickFood(food, Time.deltaTime);
         }
     }
 }

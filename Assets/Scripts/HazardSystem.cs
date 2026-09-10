@@ -1,46 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>바닥에 튄 기름. 밟으면 미끄러진다.</summary>
-public sealed class OilPuddle : MonoBehaviour
-{
-    public const float Radius = 1.1f;
-
-    private float lifetime = 40f;
-
-    private void Update()
-    {
-        lifetime -= Time.deltaTime;
-        if (lifetime <= 0f)
-        {
-            Destroy(gameObject);
-        }
-    }
-
-    public bool Covers(Vector3 position)
-    {
-        Vector3 flat = new Vector3(position.x - transform.position.x, 0f, position.z - transform.position.z);
-        return flat.sqrMagnitude <= Radius * Radius;
-    }
-}
-
-/// <summary>튀김기에 붙은 불. 끄기 전까지 그 튀김기는 못 쓴다.</summary>
-public sealed class FryerFire : MonoBehaviour
-{
-    public Station Fryer { get; private set; }
-
-    public void Attach(Station fryer)
-    {
-        Fryer = fryer;
-    }
-
-    private void Update()
-    {
-        float pulse = 1f + Mathf.Sin(Time.time * 12f) * 0.15f;
-        transform.localScale = new Vector3(1.2f, 1.8f * pulse, 1.2f);
-    }
-}
-
 /// <summary>기름 웅덩이와 화재를 만들고, 사고를 집계한다.</summary>
 public sealed class HazardSystem : MonoBehaviour
 {
@@ -116,13 +76,12 @@ public sealed class HazardSystem : MonoBehaviour
 
         Vector3 spot = fryer.transform.position + new Vector3(Random.Range(-2.5f, 2.5f), 0f, Random.Range(-3f, -1f));
         spot.y = 0.02f;
-        GameObject puddleObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        puddleObject.name = "Oil Puddle";
-        puddleObject.transform.position = spot;
-        puddleObject.transform.localScale = new Vector3(OilPuddle.Radius * 2f, 0.02f, OilPuddle.Radius * 2f);
-        Destroy(puddleObject.GetComponent<Collider>());
-        puddleObject.GetComponent<Renderer>().material.color = new Color(0.75f, 0.6f, 0.15f, 1f);
-        puddles.Add(puddleObject.AddComponent<OilPuddle>());
+        GameObject puddleObject = NetworkSpawner.SpawnHazard(
+            "NetworkOil", PrimitiveType.Cylinder, spot,
+            new Vector3(OilPuddle.Radius * 2f, 0.02f, OilPuddle.Radius * 2f),
+            new Color(0.75f, 0.6f, 0.15f));
+        OilPuddle puddle = puddleObject.GetComponent<OilPuddle>() ?? puddleObject.AddComponent<OilPuddle>();
+        puddles.Add(puddle);
         game.ShowMessage("기름이 튀었습니다! 조심하세요");
     }
 
@@ -196,12 +155,10 @@ public sealed class HazardSystem : MonoBehaviour
 
     private void StartFire(Station fryer)
     {
-        GameObject fireObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        fireObject.name = "Fryer Fire";
-        fireObject.transform.position = fryer.transform.position + Vector3.up * 1.6f;
-        Destroy(fireObject.GetComponent<Collider>());
-        fireObject.GetComponent<Renderer>().material.color = new Color(1f, 0.4f, 0.05f);
-        FryerFire fire = fireObject.AddComponent<FryerFire>();
+        GameObject fireObject = NetworkSpawner.SpawnHazard(
+            "NetworkFire", PrimitiveType.Capsule, fryer.transform.position + Vector3.up * 1.6f,
+            new Vector3(1.2f, 1.8f, 1.2f), new Color(1f, 0.4f, 0.05f));
+        FryerFire fire = fireObject.GetComponent<FryerFire>() ?? fireObject.AddComponent<FryerFire>();
         fire.Attach(fryer);
         fires.Add(fire);
         FireCount++;
@@ -230,11 +187,11 @@ public sealed class HazardSystem : MonoBehaviour
             FoodItem stored = fire.Fryer != null ? fire.Fryer.StoredFood : null;
             if (stored != null)
             {
-                Destroy(stored.gameObject);
+                NetworkSpawner.Remove(stored.gameObject);
             }
 
             fires.RemoveAt(index);
-            Destroy(fire.gameObject);
+            NetworkSpawner.Remove(fire.gameObject);
             return true;
         }
 

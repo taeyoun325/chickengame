@@ -1,31 +1,5 @@
 using UnityEngine;
 
-/// <summary>튀기는 중일 때만 김이 오르게 한다.</summary>
-public sealed class FryerSteam : MonoBehaviour
-{
-    private Station station;
-    private ParticleSystem particles;
-
-    public void Bind(Station fryer, ParticleSystem steam)
-    {
-        station = fryer;
-        particles = steam;
-    }
-
-    private void Update()
-    {
-        if (station == null || particles == null)
-        {
-            return;
-        }
-
-        FoodItem stored = station.StoredFood;
-        bool cooking = stored != null && stored.state == FoodState.Frying;
-        ParticleSystem.EmissionModule emission = particles.emission;
-        emission.rateOverTime = cooking ? 16f : 0f;
-    }
-}
-
 /// <summary>파티클과 카메라 흔들림 같은 즉각적인 피드백.</summary>
 public static class GameEffects
 {

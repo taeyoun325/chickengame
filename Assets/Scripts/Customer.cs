@@ -20,6 +20,11 @@ public sealed class Customer : MonoBehaviour
     private float bobTimer;
 
     public CustomerState State => state;
+
+    private void Start()
+    {
+        GameLog.Verbose($"[Net] 손님 스폰 ({(KitchenNetwork.IsHostSide ? "host" : "client")})");
+    }
     public bool HasLeft { get; private set; }
 
     public void Initialise(Vector3 spawnPoint, Vector3 slot, Vector3 exit, Color color)

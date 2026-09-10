@@ -22,7 +22,6 @@ public static class NetworkSpawner
         chickenObject.name = "Raw Chicken";
         chickenObject.transform.localScale = Vector3.one * 0.65f;
         FoodItem chicken = chickenObject.AddComponent<FoodItem>();
-        chickenObject.AddComponent<FoodTickProxy>();
         return chicken;
     }
 
@@ -42,6 +41,36 @@ public static class NetworkSpawner
         customerObject.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
         Object.Destroy(customerObject.GetComponent<Collider>());
         return customerObject.AddComponent<Customer>();
+    }
+
+    /// <summary>기름 웅덩이나 불처럼 위치만 있으면 되는 연출 오브젝트.</summary>
+    public static GameObject SpawnHazard(string resourceName, PrimitiveType fallbackShape, Vector3 position, Vector3 scale, Color color)
+    {
+        GameObject prefab = Online ? Resources.Load<GameObject>(resourceName) : null;
+        GameLog.Verbose($"[Spawn] {resourceName} online={Online} prefab={(prefab != null)}");
+        if (prefab != null)
+        {
+            GameObject spawned = Object.Instantiate(prefab, position, Quaternion.identity);
+            spawned.transform.localScale = scale;
+
+            // 프리팹은 기본 머티리얼을 쓰므로 색은 인스턴스에서 입힌다.
+            Renderer spawnedRenderer = spawned.GetComponent<Renderer>();
+            if (spawnedRenderer != null)
+            {
+                spawnedRenderer.material.color = color;
+            }
+
+            spawned.GetComponent<NetworkObject>().Spawn();
+            return spawned;
+        }
+
+        GameObject local = GameObject.CreatePrimitive(fallbackShape);
+        local.name = resourceName;
+        local.transform.position = position;
+        local.transform.localScale = scale;
+        Object.Destroy(local.GetComponent<Collider>());
+        local.GetComponent<Renderer>().material.color = color;
+        return local;
     }
 
     /// <summary>스폰된 오브젝트는 서버에서 Despawn 으로 지워야 한다.</summary>

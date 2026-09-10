@@ -45,6 +45,8 @@ public static class ChickenGameNetworkPrefab
         BuildFoodPrefab();
         BuildCustomerPrefab();
         BuildKitchenPrefab();
+        BuildHazardPrefab("NetworkOil", PrimitiveType.Cylinder, addPuddle: true);
+        BuildHazardPrefab("NetworkFire", PrimitiveType.Capsule, addPuddle: false);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -58,7 +60,6 @@ public static class ChickenGameNetworkPrefab
         food.name = "NetworkFood";
         food.transform.localScale = Vector3.one * 0.65f;
         food.AddComponent<FoodItem>();
-        food.AddComponent<FoodTickProxy>();
         food.AddComponent<NetworkObject>();
         NetworkTransform transform = food.AddComponent<NetworkTransform>();
         transform.AuthorityMode = NetworkTransform.AuthorityModes.Server;
@@ -80,6 +81,26 @@ public static class ChickenGameNetworkPrefab
         transform.AuthorityMode = NetworkTransform.AuthorityModes.Server;
         PrefabUtility.SaveAsPrefabAsset(customer, ResourcesFolder + "/NetworkCustomer.prefab");
         Object.DestroyImmediate(customer);
+    }
+
+    /// <summary>기름 웅덩이와 불. 위치만 공유하면 되므로 NetworkTransform 은 붙이지 않는다.</summary>
+    private static void BuildHazardPrefab(string prefabName, PrimitiveType shape, bool addPuddle)
+    {
+        GameObject hazard = GameObject.CreatePrimitive(shape);
+        hazard.name = prefabName;
+        Object.DestroyImmediate(hazard.GetComponent<Collider>());
+        hazard.AddComponent<NetworkObject>();
+        if (addPuddle)
+        {
+            hazard.AddComponent<OilPuddle>();
+        }
+        else
+        {
+            hazard.AddComponent<FryerFire>();
+        }
+
+        PrefabUtility.SaveAsPrefabAsset(hazard, ResourcesFolder + "/" + prefabName + ".prefab");
+        Object.DestroyImmediate(hazard);
     }
 
     /// <summary>가게 상태를 뿌리고 상호작용 RPC 를 받는 오브젝트.</summary>

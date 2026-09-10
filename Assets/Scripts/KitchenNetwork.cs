@@ -26,7 +26,7 @@ public sealed class KitchenNetwork : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         Instance = this;
-        Debug.Log($"[Net] 주방 동기화 시작 ({(IsServer ? "host" : "client")})");
+        GameLog.Verbose($"[Net] 주방 동기화 시작 ({(IsServer ? "host" : "client")})");
     }
 
     public override void OnNetworkDespawn()

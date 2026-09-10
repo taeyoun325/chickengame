@@ -22,7 +22,7 @@ public sealed class NetworkPlayer : NetworkBehaviour
         }
 
         name = IsOwner ? "Network Player (me)" : $"Network Player {OwnerClientId}";
-        Debug.Log($"[Net] 플레이어 아바타 스폰 id={OwnerClientId} owner={IsOwner}");
+        GameLog.Verbose($"[Net] 플레이어 아바타 스폰 id={OwnerClientId} owner={IsOwner}");
 
         // 내 캐릭터만 입력을 읽는다. 게임패드가 꽂혀 있으면 그것을 먼저 쓴다.
         LocalPlayerInput input = GetComponent<LocalPlayerInput>();
