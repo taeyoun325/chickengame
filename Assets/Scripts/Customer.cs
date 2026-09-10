@@ -19,6 +19,7 @@ public sealed class Customer : MonoBehaviour
     private Color baseColor;
     private float bobTimer;
     private TextMesh tagMesh;
+    private Transform cameraTransform;
 
     public CustomerState State => state;
 
@@ -46,6 +47,11 @@ public sealed class Customer : MonoBehaviour
 
     public void ShowTag(string text)
     {
+        if (CurrentTag == text && tagMesh != null)
+        {
+            return;
+        }
+
         CurrentTag = text;
         if (tagMesh == null)
         {
@@ -120,10 +126,24 @@ public sealed class Customer : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (tagMesh != null && Camera.main != null)
+        if (tagMesh == null)
         {
-            tagMesh.transform.rotation = Camera.main.transform.rotation;
+            return;
         }
+
+        // Camera.main 은 매 프레임 찾을 만큼 싼 호출이 아니다.
+        if (cameraTransform == null)
+        {
+            Camera main = Camera.main;
+            if (main == null)
+            {
+                return;
+            }
+
+            cameraTransform = main.transform;
+        }
+
+        tagMesh.transform.rotation = cameraTransform.rotation;
     }
 
     private void Update()

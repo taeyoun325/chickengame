@@ -65,6 +65,8 @@ public sealed partial class RestaurantGame : MonoBehaviour
     private float dayTimer;
     private float orderTimer = 3f;
     private float messageTimer;
+    private float hudTimer;
+    private float tagTimer;
     private Text revenueLabel;
     private Text dayLabel;
     private Text ordersLabel;
@@ -164,6 +166,13 @@ public sealed partial class RestaurantGame : MonoBehaviour
             orderTimer = Difficulty.OrderInterval(orderInterval, day) * orderIntervalMultiplier;
         }
 
+        tagTimer -= Time.deltaTime;
+        bool refreshTags = tagTimer <= 0f;
+        if (refreshTags)
+        {
+            tagTimer = 0.2f;
+        }
+
         bool queueChanged = false;
         for (int index = activeOrders.Count - 1; index >= 0; index--)
         {
@@ -172,6 +181,10 @@ public sealed partial class RestaurantGame : MonoBehaviour
             if (order.customer != null)
             {
                 order.customer.ShowPatience(order.remainingTime / order.patience);
+            }
+
+            if (order.customer != null && refreshTags)
+            {
                 order.customer.ShowTag(order.quantity > 1
                     ? $"{order.recipe.displayName} {order.delivered}/{order.quantity}  {Mathf.CeilToInt(order.remainingTime)}s"
                     : $"{order.recipe.displayName}  {Mathf.CeilToInt(order.remainingTime)}s");
@@ -374,8 +387,17 @@ public sealed partial class RestaurantGame : MonoBehaviour
         return text.ToString();
     }
 
+    /// <summary>HUD 는 매 프레임 다시 만들 필요가 없다. 문자열 할당을 줄이려고 10Hz 로 제한한다.</summary>
     private void UpdateHud()
     {
+        hudTimer -= Time.unscaledDeltaTime;
+        if (hudTimer > 0f)
+        {
+            return;
+        }
+
+        hudTimer = 0.1f;
+
         if (revenueLabel != null)
         {
             revenueLabel.text = $"REVENUE  ₩{revenue:N0} / ₩{TargetRevenue:N0}";
