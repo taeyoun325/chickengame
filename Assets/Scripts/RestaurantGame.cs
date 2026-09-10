@@ -117,6 +117,9 @@ public sealed partial class RestaurantGame : MonoBehaviour
     /// <summary>현재 튀김 시간. 검증 하네스가 대기 시간을 맞추는 데 쓴다.</summary>
     public float FryTime => fryTime;
 
+    /// <summary>현재 주문 간격. 전단지 마케팅이 실제로 줄이는지 검증할 때 읽는다.</summary>
+    public float OrderInterval => orderInterval;
+
     /// <summary>업그레이드로 쓴 돈까지 포함한 실제 벌어들인 총액.</summary>
     public int GrossEarned => revenue + spending;
     public int SuccessfulOrders => successfulOrders;

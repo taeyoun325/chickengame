@@ -39,6 +39,7 @@ public sealed class SelfTest : MonoBehaviour
         yield return TestOrderCheckout(game);
         yield return TestDelivery(game);
         TestUpgradeRules(game);
+        TestUpgradeEffects(game);
         yield return TestSharedAccess(game);
         yield return TestOrderExpiry(game);
         TestCleaning(game);
@@ -232,6 +233,54 @@ public sealed class SelfTest : MonoBehaviour
         game.BuyUpgrade(0);
         bool affordable = revenue >= 120_000;
         Check(affordable || game.Revenue == revenue, "자금이 모자라면 결제되지 않는다");
+    }
+
+    /// <summary>업그레이드 다섯 종이 실제로 무언가를 바꾸는지 확인한다.
+    ///
+    /// 값이 배선돼 있다는 것과 실제로 반영된다는 것은 다르다. 돈만 빠져나가고
+    /// 아무것도 달라지지 않으면 플레이어는 그걸 알아챌 방법이 없다.
+    ///
+    /// 자금 부족 검사(TestUpgradeRules) 뒤에 돈을 넣어야 그 검사가 깨지지 않는다.</summary>
+    private void TestUpgradeEffects(RestaurantGame game)
+    {
+        game.AddRevenueForTest(3_000_000);
+
+        float fryBefore = game.FryTime;
+        game.BuyUpgrade(0);
+        Check(game.FryTime < fryBefore, $"고성능 튀김기가 튀김 시간을 줄인다 ({fryBefore:0.00} → {game.FryTime:0.00})");
+
+        int fryersBefore = ActiveFryerCount();
+        game.BuyUpgrade(1);
+        Check(ActiveFryerCount() > fryersBefore, $"튀김기 증설이 대수를 늘린다 ({fryersBefore} → {ActiveFryerCount()})");
+
+        float speedBefore = GameTuning.PlayerSpeedMultiplier;
+        game.BuyUpgrade(2);
+        Check(GameTuning.PlayerSpeedMultiplier > speedBefore,
+            $"미끄럼방지 신발이 이동 속도를 올린다 ({speedBefore:0.00} → {GameTuning.PlayerSpeedMultiplier:0.00})");
+
+        float scooterBefore = GameTuning.DeliverySpeedMultiplier;
+        game.BuyUpgrade(3);
+        Check(GameTuning.DeliverySpeedMultiplier < scooterBefore,
+            $"스쿠터 튜닝이 배달 시간을 줄인다 ({scooterBefore:0.00} → {GameTuning.DeliverySpeedMultiplier:0.00})");
+
+        float intervalBefore = game.OrderInterval;
+        game.BuyUpgrade(4);
+        Check(game.OrderInterval < intervalBefore,
+            $"전단지 마케팅이 주문 간격을 줄인다 ({intervalBefore:0.00} → {game.OrderInterval:0.00})");
+    }
+
+    private static int ActiveFryerCount()
+    {
+        int count = 0;
+        foreach (Station station in WorldRegistry.Stations)
+        {
+            if (station != null && station.stationType == StationType.Fryer && station.gameObject.activeInHierarchy)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     /// <summary>손님을 놓치는 것은 이 게임의 주된 실패다. 놓쳤을 때 평판이 깎이고
