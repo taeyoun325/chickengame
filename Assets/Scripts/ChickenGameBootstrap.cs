@@ -133,6 +133,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         PlaceDiningSet(new Vector3(7f, 0f, -4.6f));
         PlaceDiningSet(new Vector3(-7f, 0f, -4.6f));
 
+        // 서서 먹는 자리. 다이너 받침대는 바닥에 세워야 제 높이가 나온다.
+        PropVisual.Place("Dinner_Stand", new Vector3(7.2f, 0f, -1.5f), new Vector3(0.9f, 1.2f, 0.9f));
+
         // 긴 카페 카운터는 벽을 따라 세워야 제 비율이 나온다.
         PropVisual.Place("Cafe_Cabinet_1", new Vector3(4.5f, 0f, 5.4f), new Vector3(6.4f, 1.1f, 0.8f));
 
@@ -148,12 +151,16 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         PropVisual.Place("Van", new Vector3(5.5f, 0f, -9f), new Vector3(4.6f, 2.4f, 2.4f), 90f);
     }
 
-    /// <summary>탁자 하나에 의자 둘. 마주 보게 놓는다.</summary>
+    /// <summary>탁자 하나에 벤치 둘. 마주 보게 놓는다.
+    ///
+    /// 다이너 의자는 1.8m 짜리 붙박이 벤치라 한 사람용 상자에 넣으면 인형처럼 줄어든다.
+    /// 돌려 세우려 해도 메시가 축에 맞지 않아 경계 상자만 부풀어 더 작아지므로,
+    /// 회전 없이 벤치 실제 크기만큼 자리를 내준다.</summary>
     private static void PlaceDiningSet(Vector3 centre)
     {
         PropVisual.Place("Cafe_Table_1", centre, new Vector3(1.4f, 0.9f, 1.4f));
-        PropVisual.Place("DinnerChair", centre + new Vector3(0f, 0f, -1.1f), new Vector3(1f, 1.3f, 1f));
-        PropVisual.Place("DinnerChair", centre + new Vector3(0f, 0f, 1.1f), new Vector3(1f, 1.3f, 1f), 180f);
+        PropVisual.Place("DinnerChair", centre + new Vector3(-1.3f, 0f, 0f), new Vector3(1.05f, 1.4f, 1.95f));
+        PropVisual.Place("DinnerChair", centre + new Vector3(1.3f, 0f, 0f), new Vector3(1.05f, 1.4f, 1.95f), 180f);
     }
 
     /// <summary>화면이 하나이고 시점이 1인칭이므로 로컬 캐릭터는 나 하나다.
@@ -425,8 +432,11 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
             StationType.Sauce => PropVisual.Attach(stationObject, "Cafe_Table_1"),
             StationType.Packing => PropVisual.Attach(stationObject, "Dinner_Table"),
             StationType.Checkout => PropVisual.Attach(stationObject, "Cafe_Cafe_Cash_Register_1", PropVisual.Placement.OnTop),
-            StationType.Delivery => PropVisual.Attach(stationObject, "Dinner_Stand", PropVisual.Placement.OnTop),
-            StationType.Upgrade => PropVisual.Attach(stationObject, "Cafe_Shelf_1", PropVisual.Placement.OnTop),
+
+            // 카운터 위에는 손에 잡히는 물건만 올린다. 바닥에 서는 가구를 올리면
+            // 상판 높이(1.6m)에 가구 키가 더해져 사람 키를 훌쩍 넘는 탑이 된다.
+            StationType.Delivery => PropVisual.Attach(stationObject, "CupBox", PropVisual.Placement.OnTop),
+            StationType.Upgrade => PropVisual.Attach(stationObject, "Cafe_Shelf_1"),
             _ => null
         };
     }
