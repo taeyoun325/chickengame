@@ -23,6 +23,20 @@ public sealed class Customer : MonoBehaviour
 
     public CustomerState State => state;
 
+    private CustomerMood mood = CustomerMood.Normal;
+    private float impatience;
+
+    /// <summary>성격에 따라 색조와 걸음이 달라진다.</summary>
+    public void ApplyMood(CustomerMood customerMood)
+    {
+        mood = customerMood ?? CustomerMood.Normal;
+        if (bodyRenderer != null && mood.kind != CustomerMoodKind.Normal)
+        {
+            baseColor = Color.Lerp(baseColor, mood.tint, 0.45f);
+            bodyRenderer.material.color = baseColor;
+        }
+    }
+
     private void Start()
     {
         GameLog.Verbose($"[Net] 손님 스폰 ({(KitchenNetwork.IsHostSide ? "host" : "client")})");
@@ -116,6 +130,12 @@ public sealed class Customer : MonoBehaviour
     /// <summary>남은 인내심에 따라 손님 색이 붉게 변한다.</summary>
     public void ShowPatience(float normalized)
     {
+        impatience = 1f - Mathf.Clamp01(normalized);
+        ApplyPatienceColor(normalized);
+    }
+
+    private void ApplyPatienceColor(float normalized)
+    {
         if (bodyRenderer == null || state == CustomerState.Leaving)
         {
             return;
@@ -160,7 +180,7 @@ public sealed class Customer : MonoBehaviour
 
         if (toTarget.sqrMagnitude > 0.04f)
         {
-            Vector3 step = toTarget.normalized * (WalkSpeed * Time.deltaTime);
+            Vector3 step = toTarget.normalized * (WalkSpeed * mood.walkSpeedScale * Time.deltaTime);
             transform.position = flatPosition + Vector3.ClampMagnitude(step, toTarget.magnitude);
             transform.forward = Vector3.Slerp(transform.forward, toTarget.normalized, 10f * Time.deltaTime);
             bobTimer += Time.deltaTime * 9f;
@@ -171,6 +191,15 @@ public sealed class Customer : MonoBehaviour
         }
 
         transform.position = target;
+
+        // 기다리다 지치면 발을 구른다. 줄만 봐도 급한 사람이 누군지 보인다.
+        if (state == CustomerState.Waiting && impatience > 0.55f)
+        {
+            bobTimer += Time.deltaTime * (6f + impatience * 10f);
+            Vector3 tapping = transform.position;
+            tapping.y = target.y + Mathf.Abs(Mathf.Sin(bobTimer)) * 0.12f * impatience;
+            transform.position = tapping;
+        }
 
         if (state == CustomerState.Leaving)
         {

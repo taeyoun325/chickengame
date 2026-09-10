@@ -11,11 +11,13 @@ public sealed class RestaurantOrder
     public readonly Customer customer;
     public readonly float patience;
     public readonly int quantity;
+    public readonly CustomerMood mood;
     public int delivered;
     public float remainingTime;
 
-    public RestaurantOrder(int orderNumber, MenuRecipe orderRecipe, Customer customerObject, float orderPatience, int orderQuantity)
+    public RestaurantOrder(int orderNumber, MenuRecipe orderRecipe, Customer customerObject, float orderPatience, int orderQuantity, CustomerMood customerMood)
     {
+        mood = customerMood ?? CustomerMood.Normal;
         number = orderNumber;
         recipe = orderRecipe;
         customer = customerObject;
@@ -203,16 +205,18 @@ public sealed partial class RestaurantGame : MonoBehaviour
 
             if (order.customer != null && refreshTags)
             {
+                string moodMark = order.mood.displayName.Length > 0 ? $"[{order.mood.displayName}] " : string.Empty;
                 order.customer.ShowTag(order.quantity > 1
-                    ? $"{order.recipe.displayName} {order.delivered}/{order.quantity}  {Mathf.CeilToInt(order.remainingTime)}s"
-                    : $"{order.recipe.displayName}  {Mathf.CeilToInt(order.remainingTime)}s");
+                    ? $"{moodMark}{order.recipe.displayName} {order.delivered}/{order.quantity}  {Mathf.CeilToInt(order.remainingTime)}s"
+                    : $"{moodMark}{order.recipe.displayName}  {Mathf.CeilToInt(order.remainingTime)}s");
             }
 
             if (order.remainingTime <= 0f)
             {
                 failedOrders++;
                 streak = 0;
-                ChangeReputation(-6);
+                ChangeReputation(-order.mood.FailurePenalty(6));
+                RushRemainingCustomers(order);
                 SendCustomerHome(order);
                 activeOrders.RemoveAt(index);
                 queueChanged = true;
@@ -399,7 +403,8 @@ public sealed partial class RestaurantGame : MonoBehaviour
         foreach (RestaurantOrder order in activeOrders)
         {
             string progress = order.quantity > 1 ? $"{order.delivered}/{order.quantity}" : "x1";
-            text.AppendLine($"#{order.number}  {order.recipe.displayName} {progress}  {Mathf.CeilToInt(order.remainingTime)}s");
+            string mark = order.mood.displayName.Length > 0 ? $" [{order.mood.displayName}]" : string.Empty;
+            text.AppendLine($"#{order.number}  {order.recipe.displayName} {progress}{mark}  {Mathf.CeilToInt(order.remainingTime)}s");
         }
 
         return text.ToString();

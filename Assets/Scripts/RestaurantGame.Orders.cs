@@ -92,7 +92,8 @@ public sealed partial class RestaurantGame
         bestStreak = Mathf.Max(bestStreak, streak);
         float multiplier = Difficulty.PriceMultiplier(day)
                            * Difficulty.ComboMultiplier(streak)
-                           * Difficulty.ReputationTip(reputation);
+                           * Difficulty.ReputationTip(reputation)
+                           * order.mood.priceScale;
         int payout = Mathf.RoundToInt((order.recipe.price + bonus) * multiplier);
         revenue += payout;
         order.delivered++;
@@ -149,8 +150,11 @@ public sealed partial class RestaurantGame
         Customer customer = NetworkSpawner.SpawnCustomer($"Customer {totalOrders}");
         customer.Initialise(DoorPoint, QueueSlot(activeOrders.Count), ExitPoint, recipe.packagedColor);
         int quantity = Difficulty.RollQuantity(day);
+        CustomerMood mood = CustomerMood.Roll(day);
+        customer.ApplyMood(mood);
         activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer,
-            Difficulty.Patience(OrderPatience, day) * patienceMultiplier * quantity, quantity));
+            Difficulty.Patience(OrderPatience, day) * patienceMultiplier * quantity * mood.patienceScale,
+            quantity, mood));
         PlaySound(GameSound.OrderIn);
         ShowMessage(quantity > 1
             ? $"주문 #{totalOrders} {recipe.displayName} x{quantity} 들어왔습니다!"
@@ -168,6 +172,18 @@ public sealed partial class RestaurantGame
         if (order.customer != null)
         {
             order.customer.Leave();
+        }
+    }
+
+    /// <summary>한 명이 화내며 나가면 줄에 선 손님들도 조급해진다.</summary>
+    private void RushRemainingCustomers(RestaurantOrder leaving)
+    {
+        foreach (RestaurantOrder order in activeOrders)
+        {
+            if (order != leaving)
+            {
+                order.remainingTime *= 0.9f;
+            }
         }
     }
 
