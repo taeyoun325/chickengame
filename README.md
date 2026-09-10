@@ -59,11 +59,14 @@ Unity.exe -batchmode -quit -nographics -projectPath . \
 ## 자동 검증
 
 빌드가 실제로 도는지 사람 손 없이 확인합니다. 냉장고 → 튀김기 → 익음 → 탐 → 폐기와
-양념 → 포장까지 한 바퀴 돌려보고 결과를 로그로 남긴 뒤 종료 코드로 알려줍니다.
+양념 → 포장까지 한 바퀴 돌려보고, 항목별 PASS/FAIL 을 로그로 남긴 뒤 종료 코드로 알려줍니다.
 
+```
+ChickenGame.exe -mode local -selftest -logFile selftest.log
+ChickenGame.exe -mode host -selftest -verbose -logFile selftest-host.log
+```
 
-
- 으로 하루를 줄여 결산까지 빨리 확인할 수 있고,  는 스폰과
+`-daylength 40` 으로 하루를 줄여 결산까지 빨리 확인할 수 있고, `-verbose` 는 스폰과
 네트워크 진단 로그를 켭니다.
 
 ## 멀티플레이
