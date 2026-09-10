@@ -41,7 +41,6 @@ public sealed partial class RestaurantGame : MonoBehaviour
     private const int MaxReputation = 100;
     private static readonly Vector3 DoorPoint = new Vector3(0f, 0.9f, -8f);
     private static readonly Vector3 ExitPoint = new Vector3(0f, 0.9f, -10f);
-    private static readonly Color NormalAmbient = new Color(0.55f, 0.48f, 0.38f);
 
     private readonly List<RestaurantOrder> activeOrders = new List<RestaurantOrder>();
     private int revenue;

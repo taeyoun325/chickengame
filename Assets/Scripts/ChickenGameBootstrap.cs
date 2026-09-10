@@ -24,6 +24,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         RandomEventSystem eventSystem = gameObject.AddComponent<RandomEventSystem>();
         eventSystem.Initialise(game);
         gameObject.AddComponent<GameAudio>();
+        gameObject.AddComponent<GameMusic>();
         gameObject.AddComponent<NetworkSession>();
         GameFlow flow = gameObject.AddComponent<GameFlow>();
         flow.Initialise(game, localPlayers);
@@ -69,6 +70,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         light.type = LightType.Directional;
         light.intensity = 1.3f;
         light.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+        lightObject.AddComponent<ShopLighting>();
     }
 
     private void BuildShop()

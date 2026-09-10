@@ -202,7 +202,11 @@ public sealed partial class RestaurantGame
                 break;
             case GameEventKind.Blackout:
                 powerOn = false;
-                RenderSettings.ambientLight = new Color(0.14f, 0.12f, 0.12f);
+                if (ShopLighting.Instance != null)
+                {
+                    ShopLighting.Instance.SetPowered(false);
+                }
+
                 break;
         }
 
@@ -217,7 +221,10 @@ public sealed partial class RestaurantGame
         if (!powerOn)
         {
             powerOn = true;
-            RenderSettings.ambientLight = NormalAmbient;
+            if (ShopLighting.Instance != null)
+            {
+                ShopLighting.Instance.SetPowered(true);
+            }
         }
 
         ShowMessage($"{gameEvent.displayName} 종료");
