@@ -136,8 +136,14 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         // 서서 먹는 자리. 다이너 받침대는 바닥에 세워야 제 높이가 나온다.
         PropVisual.Place("Dinner_Stand", new Vector3(7.2f, 0f, -1.5f), new Vector3(0.9f, 1.2f, 0.9f));
 
-        // 긴 카페 카운터는 벽을 따라 세워야 제 비율이 나온다.
-        PropVisual.Place("Cafe_Cabinet_1", new Vector3(4.5f, 0f, 5.4f), new Vector3(6.4f, 1.1f, 0.8f));
+        // 긴 카페 카운터는 벽을 따라 세워야 제 비율이 나온다. 그 위에 물건을 올려
+        // 사람이 쓰는 가게처럼 보이게 한다.
+        GameObject counter = PropVisual.Place("Cafe_Cabinet_1", new Vector3(4.5f, 0f, 5.4f), new Vector3(6.4f, 1.1f, 0.8f));
+        PropVisual.PlaceOn(counter, "CoffeeMashine", new Vector3(-2.3f, 0f, 0f), new Vector3(1f, 0.8f, 0.9f));
+        PropVisual.PlaceOn(counter, "Cafe_Cup_Stand_1", new Vector3(-0.8f, 0f, 0f), new Vector3(1f, 0.3f, 0.4f));
+        PropVisual.PlaceOn(counter, "Cafe_Bottle_with_Coffee_1", new Vector3(0.6f, 0f, 0f), new Vector3(0.3f, 0.6f, 0.3f));
+        PropVisual.PlaceOn(counter, "Cafe_Bottle_with_Coffee_2", new Vector3(1f, 0f, 0.1f), new Vector3(0.3f, 0.6f, 0.3f));
+        PropVisual.PlaceOn(counter, "Cafe_Cookie_Stand_1", new Vector3(2.2f, 0f, 0f), new Vector3(0.7f, 0.4f, 0.7f));
 
         // 벽에 거는 것들. 메뉴판은 손님이 줄을 서서 보는 방향에 건다.
         PropVisual.Place("Cafe_Board_1", new Vector3(2.5f, 2.2f, 5.6f), new Vector3(2.2f, 1.4f, 0.2f), 180f);
@@ -147,8 +153,12 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         PropVisual.Place("Cafe_Plant_1", new Vector3(8.3f, 0f, -5.4f), new Vector3(0.7f, 0.9f, 0.7f));
         PropVisual.Place("Cafe_Plant_1", new Vector3(-8.3f, 0f, -5.4f), new Vector3(0.7f, 0.9f, 0.7f));
 
-        // 배달 차량은 문 밖에 세워 둔다. 스쿠터가 오가는 곳이라 자리가 맞는다.
-        PropVisual.Place("Van", new Vector3(5.5f, 0f, -9f), new Vector3(4.6f, 2.4f, 2.4f), 90f);
+        // 문 밖 거리. 1인칭에서는 입구 너머가 그대로 보이므로, 비어 있으면 가게가
+        // 허공에 떠 있는 것처럼 느껴진다. 차는 손님이 지나는 길(가운데)을 피해 세운다.
+        // 차 모델은 z 축이 길이 방향이라, 90도 돌려야 가게 앞을 따라 나란히 선다.
+        PropVisual.Place("Van", new Vector3(5.5f, 0f, -9f), new Vector3(4.7f, 2.5f, 2.5f), 90f);
+        PropVisual.Place("Taxi", new Vector3(-5.5f, 0f, -9f), new Vector3(4.5f, 2.3f, 2.3f), 90f);
+        PropVisual.Place("Hatchback", new Vector3(-5.5f, 0f, -12f), new Vector3(3.9f, 1.8f, 2.4f), 90f);
     }
 
     /// <summary>탁자 하나에 벤치 둘. 마주 보게 놓는다.

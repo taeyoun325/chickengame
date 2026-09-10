@@ -16,7 +16,7 @@ public static class PropVisual
         OnTop
     }
 
-    public static GameObject Attach(GameObject host, string propName, Placement placement = Placement.Replace)
+    public static GameObject Attach(GameObject host, string propName, Placement placement = Placement.Replace, Bounds? space = null)
     {
         if (string.IsNullOrEmpty(propName))
         {
@@ -32,9 +32,9 @@ public static class PropVisual
         }
 
         Renderer hostRenderer = host.GetComponent<Renderer>();
-        Bounds hostBounds = hostRenderer != null
+        Bounds hostBounds = space ?? (hostRenderer != null
             ? hostRenderer.bounds
-            : new Bounds(host.transform.position, host.transform.lossyScale);
+            : new Bounds(host.transform.position, host.transform.lossyScale));
 
         if (hideHost && hostRenderer != null)
         {
@@ -72,12 +72,13 @@ public static class PropVisual
     /// 부풀어 소품이 실제보다 작게 줄어든다.</summary>
     public static GameObject Place(string propName, Vector3 floor, Vector3 box, float rotationY = 0f)
     {
+        // 앵커에는 배율을 주지 않는다. 배율을 준 채로 돌리면 회전과 비균등 배율이 서로
+        // 얽혀 잰 크기가 엉키므로, 내줄 공간은 배율 대신 상자로 따로 넘긴다.
         GameObject anchor = new GameObject("Decor " + propName);
         anchor.transform.position = floor + Vector3.up * (box.y * 0.5f);
         anchor.transform.rotation = Quaternion.Euler(0f, rotationY, 0f);
-        anchor.transform.localScale = box;
 
-        if (Attach(anchor, propName) != null)
+        if (Attach(anchor, propName, Placement.Replace, new Bounds(anchor.transform.position, box)) != null)
         {
             return anchor;
         }
@@ -85,6 +86,33 @@ public static class PropVisual
         // 에셋이 없으면 빈 껍데기를 남기지 않는다.
         Object.Destroy(anchor);
         return null;
+    }
+
+    /// <summary>다른 소품 위에 얹는다. 밑에 깔린 것의 실제 높이를 재서 올리므로
+    /// 나중에 가구를 바꿔도 위에 놓인 물건이 공중에 뜨거나 파묻히지 않는다.</summary>
+    public static GameObject PlaceOn(GameObject baseProp, string propName, Vector3 offset, Vector3 box)
+    {
+        if (baseProp == null)
+        {
+            return null;
+        }
+
+        float top = float.NegativeInfinity;
+        foreach (Renderer renderer in baseProp.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer != null && renderer.gameObject.activeInHierarchy)
+            {
+                top = Mathf.Max(top, renderer.bounds.max.y);
+            }
+        }
+
+        if (float.IsNegativeInfinity(top))
+        {
+            return null;
+        }
+
+        Vector3 baseposition = baseProp.transform.position;
+        return Place(propName, new Vector3(baseposition.x + offset.x, top, baseposition.z + offset.z), box);
     }
 
     /// <summary>도형 상자에 들어가도록 맞춘다. 에셋들은 실제 크기로 만들어져 있으므로
