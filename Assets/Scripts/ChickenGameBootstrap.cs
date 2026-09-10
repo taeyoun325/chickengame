@@ -129,9 +129,11 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     /// 소품에는 콜라이더가 없어 몸이 통과하지만, 눈에 걸리면 길이 좁아 보인다.</summary>
     private static void BuildDecor()
     {
-        // 손님이 앉는 자리. 줄 서는 곳 바깥, 좌우 벽 쪽에 둔다.
-        PlaceDiningSet(new Vector3(7f, 0f, -4.6f));
-        PlaceDiningSet(new Vector3(-7f, 0f, -4.6f));
+        // 손님이 앉는 자리. 손님은 장애물을 피해 걷지 않고 문에서 줄까지 직선으로 오므로,
+        // 가구가 그 길이나 줄 끝에 걸치면 몸을 통과해 지나간다.
+        // 줄(z -4.5, x ±5.5)과 문 앞 통로(x ±3)를 피해 옆벽 쪽에 붙인다.
+        PlaceDiningSet(new Vector3(7.3f, 0f, -1.6f));
+        PlaceDiningSet(new Vector3(-7.3f, 0f, -1.6f));
 
         // 서서 먹는 자리. 다이너 받침대는 바닥에 세워야 제 높이가 나온다.
         PropVisual.Place("Dinner_Stand", new Vector3(7.2f, 0f, -1.5f), new Vector3(0.9f, 1.2f, 0.9f));
@@ -168,9 +170,10 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     /// 회전 없이 벤치 실제 크기만큼 자리를 내준다.</summary>
     private static void PlaceDiningSet(Vector3 centre)
     {
+        // 벤치는 안쪽에 하나만 둔다. 양쪽에 두면 바깥쪽 벤치가 옆벽을 뚫는다.
+        float inward = centre.x > 0f ? -1.3f : 1.3f;
         PropVisual.Place("Cafe_Table_1", centre, new Vector3(1.4f, 0.9f, 1.4f));
-        PropVisual.Place("DinnerChair", centre + new Vector3(-1.3f, 0f, 0f), new Vector3(1.05f, 1.4f, 1.95f));
-        PropVisual.Place("DinnerChair", centre + new Vector3(1.3f, 0f, 0f), new Vector3(1.05f, 1.4f, 1.95f), 180f);
+        PropVisual.Place("DinnerChair", centre + new Vector3(inward, 0f, 0f), new Vector3(1.05f, 1.4f, 1.95f));
     }
 
     /// <summary>화면이 하나이고 시점이 1인칭이므로 로컬 캐릭터는 나 하나다.

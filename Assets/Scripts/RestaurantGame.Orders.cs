@@ -118,6 +118,19 @@ public sealed partial class RestaurantGame
     }
 
     /// <summary>같은 메뉴를 기다리는 손님 중 가장 급한 손님을 고른다.</summary>
+    /// <summary>셀프테스트가 주문 만료를 확인하려고 쓴다. 인내심이 다할 때까지
+    /// 실제로 기다리면 검증에만 수십 초가 걸린다.</summary>
+    public bool ExpireOldestOrderForTest()
+    {
+        if (activeOrders.Count == 0)
+        {
+            return false;
+        }
+
+        activeOrders[0].remainingTime = 0f;
+        return true;
+    }
+
     private RestaurantOrder FindOrderFor(MenuKind kind)
     {
         RestaurantOrder best = null;

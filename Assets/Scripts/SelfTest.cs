@@ -40,6 +40,7 @@ public sealed class SelfTest : MonoBehaviour
         yield return TestDelivery(game);
         TestUpgradeRules(game);
         yield return TestSharedAccess(game);
+        yield return TestOrderExpiry(game);
         TestCleaning(game);
         TestClosureAndReopen(game);
         TestVictory(game);
@@ -188,6 +189,32 @@ public sealed class SelfTest : MonoBehaviour
         game.BuyUpgrade(0);
         bool affordable = revenue >= 120_000;
         Check(affordable || game.Revenue == revenue, "자금이 모자라면 결제되지 않는다");
+    }
+
+    /// <summary>손님을 놓치는 것은 이 게임의 주된 실패다. 놓쳤을 때 평판이 깎이고
+    /// 콤보가 끊기지 않으면 서두를 이유가 사라진다.</summary>
+    private IEnumerator TestOrderExpiry(RestaurantGame game)
+    {
+        game.SpawnOrderBurst(1);
+        yield return null;
+
+        int failedBefore = game.FailedOrders;
+        int reputationBefore = game.Reputation;
+
+        if (!game.ExpireOldestOrderForTest())
+        {
+            Check(false, "만료를 시험할 주문이 있다");
+            yield break;
+        }
+
+        // 만료는 다음 갱신에서 처리된다.
+        yield return null;
+        yield return null;
+
+        Check(game.FailedOrders > failedBefore,
+            $"인내심이 다한 주문은 실패로 센다 ({failedBefore} → {game.FailedOrders})");
+        Check(game.Reputation < reputationBefore,
+            $"손님을 놓치면 평판이 깎인다 ({reputationBefore} → {game.Reputation})");
     }
 
     /// <summary>여럿이 같은 것을 동시에 건드려도 중복 처리되면 안 된다.
