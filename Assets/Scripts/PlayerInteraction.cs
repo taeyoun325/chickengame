@@ -9,6 +9,10 @@ public sealed class PlayerInteraction : MonoBehaviour
     /// 카운터 너머의 스테이션도 자연스럽게 잡힌다.</summary>
     private const float AimRange = 3.1f;
 
+    /// <summary>튀긴 치킨을 떨어뜨렸을 때 그 자리가 기름져질 확률.
+    /// 매번 생기면 한 번 실수한 사람이 회복할 수 없게 된다.</summary>
+    private const float GreaseSpillChance = 0.5f;
+
     private Transform holdPoint;
     private FoodItem heldFood;
     private GameObject extinguisher;
@@ -221,11 +225,21 @@ public sealed class PlayerInteraction : MonoBehaviour
 
         dropped.SetHeld(false);
         body.linearVelocity = transform.forward * 2f;
+        bool greasy = dropped.state != FoodState.Raw;
         dropped.MarkDirty();
 
-        if (RestaurantGame.Instance != null)
+        if (RestaurantGame.Instance == null)
         {
-            RestaurantGame.Instance.ShowMessage("떨어뜨렸습니다! 바닥에 닿은 치킨은 못 씁니다");
+            return;
+        }
+
+        RestaurantGame.Instance.ShowMessage("떨어뜨렸습니다! 바닥에 닿은 치킨은 못 씁니다");
+
+        // 튀긴 치킨은 기름을 머금고 있어 떨어진 자리가 미끄러워진다.
+        // 생닭은 아직 기름이 없다. 사고가 다음 사고를 부르는 고리가 여기서 시작된다.
+        if (greasy && Random.value < GreaseSpillChance)
+        {
+            RestaurantGame.Instance.SpillOilAt(spot);
         }
     }
 

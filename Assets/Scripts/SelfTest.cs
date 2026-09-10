@@ -42,7 +42,7 @@ public sealed class SelfTest : MonoBehaviour
         TestUpgradeEffects(game);
         yield return TestSharedAccess(game);
         yield return TestOrderExpiry(game);
-        TestCleaning(game);
+        yield return TestCleaning(game);
         TestClosureAndReopen(game);
         TestVictory(game);
 
@@ -254,9 +254,12 @@ public sealed class SelfTest : MonoBehaviour
         Check(ActiveFryerCount() > fryersBefore, $"튀김기 증설이 대수를 늘린다 ({fryersBefore} → {ActiveFryerCount()})");
 
         float speedBefore = GameTuning.PlayerSpeedMultiplier;
+        float slipBefore = GameTuning.SlipResistance;
         game.BuyUpgrade(2);
         Check(GameTuning.PlayerSpeedMultiplier > speedBefore,
             $"미끄럼방지 신발이 이동 속도를 올린다 ({speedBefore:0.00} → {GameTuning.PlayerSpeedMultiplier:0.00})");
+        Check(GameTuning.SlipResistance < slipBefore,
+            $"미끄럼방지 신발이 이름값을 한다 ({slipBefore:0.00} → {GameTuning.SlipResistance:0.00})");
 
         float scooterBefore = GameTuning.DeliverySpeedMultiplier;
         game.BuyUpgrade(3);
@@ -353,18 +356,80 @@ public sealed class SelfTest : MonoBehaviour
         actor.DropEverything();
     }
 
+    /// <summary>사고가 다음 사고를 부르는 고리. 튀긴 치킨을 떨어뜨리면 그 자리가
+    /// 기름져 다음 사람이 미끄러진다. 생닭은 아직 기름이 없으므로 남기지 않는다.
+    ///
+    /// 확률이라 여러 번 시도한다. 매번 생기면 한 번 실수한 사람이 회복할 수 없다.</summary>
+    private IEnumerator TestDropSpill(RestaurantGame game, PlayerInteraction actor)
+    {
+        Station fridge = FindStation(StationType.Fridge);
+        if (fridge == null)
+        {
+            Check(false, "떨어뜨림 연쇄를 시험할 냉장고가 있다");
+            yield break;
+        }
+
+        // 생닭은 몇 번을 떨어뜨려도 기름이 남지 않아야 한다.
+        bool rawSpilled = false;
+        for (int attempt = 0; attempt < 6 && !rawSpilled; attempt++)
+        {
+            game.InteractWithStation(actor, fridge);
+            Vector3 spot = DropSpot(actor);
+            actor.DropEverything();
+            rawSpilled = OilPuddle.Covering(spot) != null;
+        }
+
+        Check(!rawSpilled, "생닭은 떨어뜨려도 기름이 남지 않는다");
+
+        // 튀긴 치킨은 남긴다.
+        bool cookedSpilled = false;
+        for (int attempt = 0; attempt < 14 && !cookedSpilled; attempt++)
+        {
+            game.InteractWithStation(actor, fridge);
+            if (actor.HeldFood == null)
+            {
+                continue;
+            }
+
+            actor.HeldFood.SetState(FoodState.Cooked);
+            Vector3 spot = DropSpot(actor);
+            actor.DropEverything();
+            cookedSpilled = OilPuddle.Covering(spot) != null;
+        }
+
+        Check(cookedSpilled, "튀긴 치킨을 떨어뜨리면 바닥이 기름진다");
+
+        // 여기서 만든 기름을 치우고 넘어간다. 남겨두면 다음 검사가
+        // 자기가 만든 기름을 닦았는지 여기서 흘린 것을 닦았는지 알 수 없다.
+        while (game.TryCleanNearby(actor.transform.position))
+        {
+        }
+
+        yield return null;
+    }
+
+    /// <summary>떨어뜨린 것이 놓이는 자리. DropEverything 과 같은 계산이다.</summary>
+    private static Vector3 DropSpot(PlayerInteraction actor)
+    {
+        Vector3 spot = actor.transform.position + actor.transform.forward * 0.8f;
+        spot.y = 0.35f;
+        return spot;
+    }
+
     /// <summary>사고는 사람 손으로 수습할 수 있어야 한다. 기름을 저절로 마르기만
     /// 기다려야 한다면 미끄러짐은 그냥 당하는 일이 된다.</summary>
-    private void TestCleaning(RestaurantGame game)
+    private IEnumerator TestCleaning(RestaurantGame game)
     {
         PlayerInteraction actor = WorldRegistry.Players.Count > 0 ? WorldRegistry.Players[0] : null;
         if (actor == null)
         {
             Check(false, "청소를 시험할 플레이어가 있다");
-            return;
+            yield break;
         }
 
         actor.DropEverything();
+        yield return TestDropSpill(game, actor);
+
         game.SpillOilAt(actor.transform.position);
         Check(OilPuddle.Covering(actor.transform.position) != null, "발밑에 기름이 생겼다");
         Check(actor.CanClean, "손이 비어 있으면 닦을 수 있다고 알려준다");

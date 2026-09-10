@@ -53,7 +53,7 @@ public sealed class UpgradeSystem : MonoBehaviour
     {
         new Upgrade(UpgradeKind.FryerSpeed, "고성능 튀김기", "튀김 시간 -12%", 120_000, 4),
         new Upgrade(UpgradeKind.ExtraFryer, "튀김기 증설", "튀김기 +1대", 250_000, 2),
-        new Upgrade(UpgradeKind.MoveSpeed, "미끄럼방지 신발", "이동 속도 +12%", 90_000, 4),
+        new Upgrade(UpgradeKind.MoveSpeed, "미끄럼방지 신발", "이동 +12%, 미끄러짐 -30%", 90_000, 4),
         new Upgrade(UpgradeKind.ScooterSpeed, "배달 스쿠터 튜닝", "배달 시간 -15%", 150_000, 3),
         new Upgrade(UpgradeKind.Marketing, "전단지 마케팅", "주문 간격 -10%", 110_000, 3)
     };

@@ -60,7 +60,11 @@ public sealed class HazardSystem : MonoBehaviour
         CheckBurntFires(deltaTime);
     }
 
-    /// <summary>튀김기 주변 아무 데나 기름이 튄다.</summary>
+    /// <summary>튀김기 주변에 기름이 튄다.
+    ///
+    /// 실제로 튀기고 있는 튀김기에서만 튄다. 시간만 지나면 무조건 튀면 플레이어가
+    /// 할 수 있는 일이 없고, 사고가 실력이 아니라 날씨가 된다.
+    /// 바쁘게 돌릴수록 위험해지는 것은 주방으로서 자연스럽다.</summary>
     private void SpillOil()
     {
         if (puddles.Count >= 4)
@@ -68,7 +72,7 @@ public sealed class HazardSystem : MonoBehaviour
             return;
         }
 
-        Station fryer = FindAnyFryer();
+        Station fryer = FindFryingFryer();
         if (fryer == null)
         {
             return;
@@ -76,6 +80,24 @@ public sealed class HazardSystem : MonoBehaviour
 
         Vector3 spot = fryer.transform.position + new Vector3(Random.Range(-2.5f, 2.5f), 0f, Random.Range(-3f, -1f));
         SpillOilAt(spot);
+    }
+
+    /// <summary>지금 실제로 무언가 튀기고 있는 튀김기.</summary>
+    private static Station FindFryingFryer()
+    {
+        foreach (Station station in WorldRegistry.Stations)
+        {
+            if (station != null
+                && station.stationType == StationType.Fryer
+                && station.gameObject.activeInHierarchy
+                && station.StoredFood != null
+                && station.StoredFood.state == FoodState.Frying)
+            {
+                return station;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>정해진 자리에 기름을 쏟는다. 튀김기에서 튀는 경우 말고도
@@ -120,8 +142,15 @@ public sealed class HazardSystem : MonoBehaviour
                     continue;
                 }
 
-                motor.Slip(SlipDuration, actor.transform.forward);
+                // 밟을 때마다 다시 굴리면 신발을 신어도 결국 미끄러진다.
+                // 한 번 판정했으면 쿨다운을 둬서 그 결과를 유지한다.
                 slipCooldowns[actor] = SlipCooldown;
+                if (Random.value >= GameTuning.SlipResistance)
+                {
+                    break;
+                }
+
+                motor.Slip(SlipDuration, actor.transform.forward);
                 SlipCount++;
                 RestaurantGame.PlaySound(GameSound.Slip);
                 GameEffects.Shake(0.35f, 0.35f);

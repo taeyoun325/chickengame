@@ -188,7 +188,9 @@ public sealed partial class RestaurantGame
         fryTime = BaseFryTime * Mathf.Pow(0.88f, upgrades.LevelOf(UpgradeKind.FryerSpeed));
         burnTime = fryTime + BurnGrace;
         orderInterval = BaseOrderInterval * Mathf.Pow(0.9f, upgrades.LevelOf(UpgradeKind.Marketing));
-        GameTuning.PlayerSpeedMultiplier = Mathf.Pow(1.12f, upgrades.LevelOf(UpgradeKind.MoveSpeed));
+        int shoes = upgrades.LevelOf(UpgradeKind.MoveSpeed);
+        GameTuning.PlayerSpeedMultiplier = Mathf.Pow(1.12f, shoes);
+        GameTuning.SlipResistance = Mathf.Pow(0.7f, shoes);
         GameTuning.DeliverySpeedMultiplier = Mathf.Pow(0.85f, upgrades.LevelOf(UpgradeKind.ScooterSpeed));
 
         int extraFryers = upgrades.LevelOf(UpgradeKind.ExtraFryer);
