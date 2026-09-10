@@ -31,6 +31,13 @@ public static class Difficulty
         return Mathf.Max(9f, baseInterval * Mathf.Pow(0.93f, Mathf.Max(0, day - 1)));
     }
 
+    /// <summary>DAY 3 부터는 두 마리, DAY 5 부터는 세 마리까지 시킨다.</summary>
+    public static int RollQuantity(int day)
+    {
+        int max = day >= 5 ? 3 : day >= 3 ? 2 : 1;
+        return Random.Range(1, max + 1);
+    }
+
     /// <summary>연속 성공 보너스. 10연속이면 2배.</summary>
     public static float ComboMultiplier(int streak)
     {

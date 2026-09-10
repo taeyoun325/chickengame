@@ -10,16 +10,22 @@ public sealed class RestaurantOrder
     public readonly MenuRecipe recipe;
     public readonly Customer customer;
     public readonly float patience;
+    public readonly int quantity;
+    public int delivered;
     public float remainingTime;
 
-    public RestaurantOrder(int orderNumber, MenuRecipe orderRecipe, Customer customerObject, float orderPatience)
+    public RestaurantOrder(int orderNumber, MenuRecipe orderRecipe, Customer customerObject, float orderPatience, int orderQuantity)
     {
         number = orderNumber;
         recipe = orderRecipe;
         customer = customerObject;
         patience = orderPatience;
+        quantity = Mathf.Max(1, orderQuantity);
         remainingTime = orderPatience;
     }
+
+    /// <summary>아직 받지 못한 수량.</summary>
+    public int Remaining => quantity - delivered;
 }
 
 public sealed partial class RestaurantGame : MonoBehaviour
@@ -87,6 +93,9 @@ public sealed partial class RestaurantGame : MonoBehaviour
     /// <summary>대기 중인 매장 주문. HUD 와 자동 검증에서 읽는다.</summary>
     public IReadOnlyList<RestaurantOrder> ActiveOrders => activeOrders;
 
+    /// <summary>자동 검증 중에는 손님이 저절로 들어오지 않게 잠시 끈다.</summary>
+    public bool AutoOrdersEnabled { get; set; } = true;
+
     private float dayLength = DefaultDayLength;
 
     private void Awake()
@@ -94,11 +103,11 @@ public sealed partial class RestaurantGame : MonoBehaviour
         Instance = this;
         GameTuning.Reset();
         Time.timeScale = 1f;
-        ReadDayLengthArgument();
+        ReadQaArguments();
     }
 
-    /// <summary>-daylength 60 처럼 하루 길이를 줄여 결산까지 빠르게 확인할 수 있다.</summary>
-    private void ReadDayLengthArgument()
+    /// <summary>-daylength 60, -startday 5 처럼 검증용으로 진행 상태를 지정할 수 있다.</summary>
+    private void ReadQaArguments()
     {
         string[] args = System.Environment.GetCommandLineArgs();
         for (int index = 0; index < args.Length - 1; index++)
@@ -107,6 +116,11 @@ public sealed partial class RestaurantGame : MonoBehaviour
             {
                 dayLength = seconds;
                 Debug.Log($"[Day] 하루 길이를 {seconds}초로 설정");
+            }
+            else if (args[index] == "-startday" && int.TryParse(args[index + 1], out int startDay) && startDay >= 1)
+            {
+                day = startDay;
+                Debug.Log($"[Day] DAY {startDay} 부터 시작");
             }
         }
     }
@@ -141,7 +155,11 @@ public sealed partial class RestaurantGame : MonoBehaviour
 
         if (orderTimer <= 0f)
         {
-            CreateOrder();
+            if (AutoOrdersEnabled)
+            {
+                CreateOrder();
+            }
+
             orderTimer = Difficulty.OrderInterval(orderInterval, day) * orderIntervalMultiplier;
         }
 
@@ -345,7 +363,8 @@ public sealed partial class RestaurantGame : MonoBehaviour
         StringBuilder text = new StringBuilder("ORDERS\n");
         foreach (RestaurantOrder order in activeOrders)
         {
-            text.AppendLine($"#{order.number}  {order.recipe.displayName} x1  {Mathf.CeilToInt(order.remainingTime)}s");
+            string progress = order.quantity > 1 ? $"{order.delivered}/{order.quantity}" : "x1";
+            text.AppendLine($"#{order.number}  {order.recipe.displayName} {progress}  {Mathf.CeilToInt(order.remainingTime)}s");
         }
 
         return text.ToString();

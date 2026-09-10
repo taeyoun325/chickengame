@@ -30,12 +30,16 @@ public sealed class SelfTest : MonoBehaviour
             yield break;
         }
 
+        // 검증 중에는 손님이 저절로 들어오면 결과가 흔들린다.
+        game.AutoOrdersEnabled = false;
+
         yield return TestCookingPipeline(game);
         yield return TestSauceAndPacking(game);
         yield return TestOrderCheckout(game);
         yield return TestDelivery(game);
         TestUpgradeRules(game);
 
+        game.AutoOrdersEnabled = true;
         Report();
     }
 
@@ -117,18 +121,29 @@ public sealed class SelfTest : MonoBehaviour
             yield break;
         }
 
-        MenuRecipe wanted = game.ActiveOrders[0].recipe;
+        RestaurantOrder order = game.ActiveOrders[0];
+        MenuRecipe wanted = order.recipe;
+        int quantity = order.quantity;
         int revenueBefore = game.Revenue;
         int streakBefore = game.Streak;
 
-        yield return MakeMenu(game, actor, wanted);
-        Check(actor.HeldFood != null && actor.HeldFood.state == FoodState.Packaged,
-            $"{wanted.displayName} 포장 완성");
+        // 여러 마리를 시킨 주문은 수량만큼 채워야 손님이 간다.
+        for (int served = 1; served <= quantity; served++)
+        {
+            yield return MakeMenu(game, actor, wanted);
+            Check(actor.HeldFood != null && actor.HeldFood.state == FoodState.Packaged,
+                $"{wanted.displayName} 포장 완성 ({served}/{quantity})");
 
-        game.InteractWithStation(actor, FindStation(StationType.Checkout));
-        Check(actor.HeldFood == null, "계산대에 넘겼다");
+            game.InteractWithStation(actor, FindStation(StationType.Checkout));
+            Check(actor.HeldFood == null, $"계산대에 넘겼다 ({served}/{quantity})");
+
+            bool shouldStillWait = served < quantity;
+            Check(StillWaiting(game, order) == shouldStillWait,
+                shouldStillWait ? "남은 수량이 있어 손님이 기다린다" : "수량을 다 채우면 손님이 떠난다");
+        }
+
         Check(game.Revenue > revenueBefore, $"매출이 올랐다 ({revenueBefore} → {game.Revenue})");
-        Check(game.Streak == streakBefore + 1, $"콤보가 올랐다 ({game.Streak})");
+        Check(game.Streak == streakBefore + quantity, $"콤보가 수량만큼 올랐다 ({game.Streak})");
     }
 
     /// <summary>배달 주문을 만들고 배달대에 넘겨 스쿠터가 출발하는지 본다.</summary>
@@ -198,6 +213,19 @@ public sealed class SelfTest : MonoBehaviour
         {
             game.InteractWithStation(actor, FindStation(StationType.Trash));
         }
+    }
+
+    private static bool StillWaiting(RestaurantGame game, RestaurantOrder order)
+    {
+        foreach (RestaurantOrder active in game.ActiveOrders)
+        {
+            if (active == order)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static Station FindStation(StationType type)

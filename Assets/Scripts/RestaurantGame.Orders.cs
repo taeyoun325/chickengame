@@ -91,16 +91,25 @@ public sealed partial class RestaurantGame
         float multiplier = Difficulty.PriceMultiplier(day) * Difficulty.ComboMultiplier(streak);
         int payout = Mathf.RoundToInt((order.recipe.price + bonus) * multiplier);
         revenue += payout;
+        order.delivered++;
+        actor.ClearHeldFood();
+        NetworkSpawner.Remove(food.gameObject);
+        PlaySound(GameSound.Cash);
+        GameEffects.Burst(actor.transform.position + Vector3.up * 1.4f, new Color(1f, 0.85f, 0.25f));
+
+        // 여러 마리를 시킨 손님은 다 채워야 자리를 뜬다.
+        if (order.Remaining > 0)
+        {
+            ShowMessage($"주문 #{order.number} {order.delivered}/{order.quantity} 마리 +₩{payout:N0}");
+            return;
+        }
+
         successfulOrders++;
         ChangeReputation(+3);
         activeOrders.Remove(order);
         SendCustomerHome(order);
         ReflowQueue();
-        actor.ClearHeldFood();
-        NetworkSpawner.Remove(food.gameObject);
-        PlaySound(GameSound.Cash);
-        GameEffects.Burst(actor.transform.position + Vector3.up * 1.4f, new Color(1f, 0.85f, 0.25f));
-        ShowMessage($"주문 #{order.number} {order.recipe.displayName} 완료! +₩{payout:N0}");
+        ShowMessage($"주문 #{order.number} {order.recipe.displayName} x{order.quantity} 완료! +₩{payout:N0}");
     }
 
     /// <summary>같은 메뉴를 기다리는 손님 중 가장 급한 손님을 고른다.</summary>
@@ -109,7 +118,7 @@ public sealed partial class RestaurantGame
         RestaurantOrder best = null;
         foreach (RestaurantOrder order in activeOrders)
         {
-            if (order.recipe.kind != kind)
+            if (order.recipe.kind != kind || order.Remaining <= 0)
             {
                 continue;
             }
@@ -134,9 +143,13 @@ public sealed partial class RestaurantGame
         MenuRecipe recipe = MenuDatabase.RandomFor(day);
         Customer customer = NetworkSpawner.SpawnCustomer($"Customer {totalOrders}");
         customer.Initialise(DoorPoint, QueueSlot(activeOrders.Count), ExitPoint, recipe.packagedColor);
-        activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer, Difficulty.Patience(OrderPatience, day) * patienceMultiplier));
+        int quantity = Difficulty.RollQuantity(day);
+        activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer,
+            Difficulty.Patience(OrderPatience, day) * patienceMultiplier * quantity, quantity));
         PlaySound(GameSound.OrderIn);
-        ShowMessage($"주문 #{totalOrders} {recipe.displayName} 들어왔습니다!");
+        ShowMessage(quantity > 1
+            ? $"주문 #{totalOrders} {recipe.displayName} x{quantity} 들어왔습니다!"
+            : $"주문 #{totalOrders} {recipe.displayName} 들어왔습니다!");
     }
 
     private static Vector3 QueueSlot(int index)
