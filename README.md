@@ -56,6 +56,16 @@ Unity.exe -batchmode -quit -nographics -projectPath . \
   -executeMethod ChickenGameBuilder.BuildFromCommandLine -buildOutput Builds/ChickenGame.exe
 ```
 
+## 자동 검증
+
+빌드가 실제로 도는지 사람 손 없이 확인합니다. 냉장고 → 튀김기 → 익음 → 탐 → 폐기와
+양념 → 포장까지 한 바퀴 돌려보고 결과를 로그로 남긴 뒤 종료 코드로 알려줍니다.
+
+
+
+ 으로 하루를 줄여 결산까지 빨리 확인할 수 있고,  는 스폰과
+네트워크 진단 로그를 켭니다.
+
 ## 멀티플레이
 
 호스트가 먼저 열고, 같은 네트워크의 친구가 호스트 IP로 접속합니다. 기본 포트는 `7777` 입니다.

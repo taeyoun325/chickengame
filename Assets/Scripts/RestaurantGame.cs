@@ -707,7 +707,16 @@ public sealed class RestaurantGame : MonoBehaviour
 
     public void TickFood(FoodItem food, float deltaTime)
     {
-        if (food.state != FoodState.Frying || !powerOn)
+        if (!powerOn || food.burnCounted)
+        {
+            return;
+        }
+
+        // 익은 뒤에도 튀김기에 그대로 두면 계속 익어서 결국 탄다.
+        // (익는 순간 진행이 멈춰 버려서 한동안 치킨이 아예 타지 않았다.)
+        bool restingInFryer = food.RestingStation != null && food.RestingStation.stationType == StationType.Fryer;
+        bool stillCooking = food.state == FoodState.Frying || (food.state == FoodState.Cooked && restingInFryer);
+        if (!stillCooking)
         {
             return;
         }
@@ -763,7 +772,7 @@ public sealed class RestaurantGame : MonoBehaviour
             chicken.SetState(FoodState.Frying);
             chicken.cookProgress = 0f;
             PlaySound(GameSound.FryStart);
-        ShowMessage($"튀김 시작! {fryTime:0.0}초 뒤 꺼내세요");
+            ShowMessage($"튀김 시작! {fryTime:0.0}초 뒤 꺼내세요");
             return;
         }
 

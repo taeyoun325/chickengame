@@ -32,6 +32,11 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         game.ConnectHazards(hazardSystem);
         BuildHud(game, delivery, upgradeSystem, eventSystem, flow);
         Debug.Log($"Chicken Game ready - DAY {game.Day}, 매출 {game.Revenue}");
+
+        if (SelfTest.Requested)
+        {
+            gameObject.AddComponent<SelfTest>();
+        }
     }
 
     /// <summary>증설로 열리는 2, 3번 튀김기를 미리 만들어 두고 꺼둔다.</summary>
