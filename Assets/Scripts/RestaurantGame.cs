@@ -77,6 +77,7 @@ public sealed class RestaurantGame : MonoBehaviour
     private bool powerOn = true;
     private RandomEventSystem events;
     private Text eventLabel;
+    private Text networkLabel;
 
     public int Day => day;
     public int Revenue => revenue;
@@ -190,6 +191,11 @@ public sealed class RestaurantGame : MonoBehaviour
                 ToggleExtinguisher(actor);
                 break;
         }
+    }
+
+    public void ConnectNetworkLabel(Text label)
+    {
+        networkLabel = label;
     }
 
     public void ConnectHazards(HazardSystem system)
@@ -849,6 +855,11 @@ public sealed class RestaurantGame : MonoBehaviour
 
                 ordersLabel.text = text.ToString();
             }
+        }
+
+        if (networkLabel != null && NetworkSession.Instance != null)
+        {
+            networkLabel.text = NetworkSession.Instance.BuildStatusText();
         }
 
         if (eventLabel != null && events != null)

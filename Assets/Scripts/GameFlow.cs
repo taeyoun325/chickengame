@@ -27,6 +27,7 @@ public sealed class GameFlow : MonoBehaviour
     private Text titleText;
     private Text settlementText;
     private Text resultText;
+    private GameObject localPlayerRoot;
 
     public GameState State => state;
     public bool IsPlaying => state == GameState.Playing;
@@ -36,9 +37,45 @@ public sealed class GameFlow : MonoBehaviour
         Instance = this;
     }
 
-    public void Initialise(RestaurantGame restaurantGame)
+    public void Initialise(RestaurantGame restaurantGame, GameObject localPlayers)
     {
         game = restaurantGame;
+        localPlayerRoot = localPlayers;
+    }
+
+    /// <summary>-mode host / -mode client -address 192.168.0.5 처럼 실행 인자로 바로 시작할 수 있다.
+    /// LAN 파티에서 타이틀을 거치지 않고 켜거나, 자동 테스트를 돌릴 때 쓴다.</summary>
+    private bool TryStartFromCommandLine()
+    {
+        string mode = null;
+        string address = "127.0.0.1";
+        string[] args = System.Environment.GetCommandLineArgs();
+        for (int index = 0; index < args.Length - 1; index++)
+        {
+            if (args[index] == "-mode")
+            {
+                mode = args[index + 1].ToLowerInvariant();
+            }
+            else if (args[index] == "-address")
+            {
+                address = args[index + 1];
+            }
+        }
+
+        switch (mode)
+        {
+            case "host":
+                StartNetworkGame(true, address);
+                return true;
+            case "client":
+                StartNetworkGame(false, address);
+                return true;
+            case "local":
+                StartGame(false);
+                return true;
+            default:
+                return false;
+        }
     }
 
     public void ConnectPanels(GameObject title, Text titleLabel, GameObject pause, GameObject settlement, Text settlementLabel, GameObject result, Text resultLabel)
@@ -51,6 +88,7 @@ public sealed class GameFlow : MonoBehaviour
         resultPanel = result;
         resultText = resultLabel;
         EnterTitle();
+        TryStartFromCommandLine();
     }
 
     private void Update()
@@ -71,6 +109,14 @@ public sealed class GameFlow : MonoBehaviour
                 else if (keyboard.cKey.wasPressedThisFrame && SaveSystem.HasSave)
                 {
                     StartGame(true);
+                }
+                else if (keyboard.hKey.wasPressedThisFrame)
+                {
+                    StartNetworkGame(host: true);
+                }
+                else if (keyboard.jKey.wasPressedThisFrame)
+                {
+                    StartNetworkGame(host: false);
                 }
 
                 break;
@@ -130,6 +176,35 @@ public sealed class GameFlow : MonoBehaviour
         else
         {
             SaveSystem.Delete();
+        }
+
+        state = GameState.Playing;
+        Time.timeScale = 1f;
+        SetPanels();
+    }
+
+    /// <summary>호스트로 열거나 같은 네트워크의 호스트에 접속한다.</summary>
+    private void StartNetworkGame(bool host, string address = "127.0.0.1")
+    {
+        if (NetworkSession.Instance == null)
+        {
+            return;
+        }
+
+        SaveSystem.Delete();
+        bool started = host
+            ? NetworkSession.Instance.StartHost()
+            : NetworkSession.Instance.StartClient(address);
+
+        if (!started)
+        {
+            return;
+        }
+
+        // 네트워크 모드에서는 각자 자기 캐릭터를 스폰하므로 로컬 2인용 캐릭터는 접는다.
+        if (localPlayerRoot != null)
+        {
+            localPlayerRoot.SetActive(false);
         }
 
         state = GameState.Playing;
@@ -213,7 +288,8 @@ public sealed class GameFlow : MonoBehaviour
         string continueLine = SaveSystem.HasSave ? "C  이어하기" : "저장된 기록 없음";
         return "CHICKEN GAME\n\n" +
                "누적 매출 ₩10,000,000 을 목표로\n치킨집을 운영하세요\n\n" +
-               "SPACE  새 게임\n" + continueLine + "\n\n" +
+               "SPACE  로컬 2인 새 게임\n" + continueLine + "\n" +
+               "H  호스트로 열기      J  호스트에 접속\n\n" +
                "P1 WASD + E     P2 IJKL + E\nESC 일시정지";
     }
 }

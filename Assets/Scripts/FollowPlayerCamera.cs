@@ -25,6 +25,15 @@ public sealed class FollowPlayerCamera : MonoBehaviour
         }
     }
 
+    /// <summary>네트워크로 스폰된 내 캐릭터를 카메라가 따라가게 한다.</summary>
+    public static void SetTarget(Transform newTarget)
+    {
+        if (Instance != null)
+        {
+            Instance.target = newTarget;
+        }
+    }
+
     /// <summary>사고가 났을 때 화면을 짧게 흔든다.</summary>
     public void Shake(float duration, float strength)
     {

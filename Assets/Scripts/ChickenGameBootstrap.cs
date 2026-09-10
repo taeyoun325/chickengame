@@ -7,8 +7,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     {
         BuildLighting();
         BuildShop();
-        BuildPlayer();
-        BuildLocalCoopPlayer();
+        GameObject localPlayers = new GameObject("Local Players");
+        BuildPlayer().transform.SetParent(localPlayers.transform, true);
+        BuildLocalCoopPlayer().transform.SetParent(localPlayers.transform, true);
         BuildCamera();
         GameObject gameObject = new GameObject("Restaurant Game");
         RestaurantGame game = gameObject.AddComponent<RestaurantGame>();
@@ -20,8 +21,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         RandomEventSystem eventSystem = gameObject.AddComponent<RandomEventSystem>();
         eventSystem.Initialise(game);
         gameObject.AddComponent<GameAudio>();
+        gameObject.AddComponent<NetworkSession>();
         GameFlow flow = gameObject.AddComponent<GameFlow>();
-        flow.Initialise(game);
+        flow.Initialise(game, localPlayers);
         HazardSystem hazardSystem = gameObject.AddComponent<HazardSystem>();
         hazardSystem.Initialise(game);
         game.ConnectHazards(hazardSystem);
@@ -113,7 +115,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         cameraObject.AddComponent<FollowPlayerCamera>();
     }
 
-    private void BuildLocalCoopPlayer()
+    private GameObject BuildLocalCoopPlayer()
     {
         GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         player.name = "Local Player 2";
@@ -127,6 +129,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         player.AddComponent<LocalCoopPlayerController>();
         player.AddComponent<PlayerInteraction>();
         player.GetComponent<Renderer>().material.color = new Color(0.25f, 0.65f, 1f);
+        return player;
     }
 
     private void BuildHud(RestaurantGame game, DeliverySystem delivery, UpgradeSystem upgradeSystem, RandomEventSystem eventSystem, GameFlow flow)
@@ -193,7 +196,16 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         eventBanner.color = new Color(1f, 0.85f, 0.3f);
 
         game.ConnectUpgrades(upgradeSystem, upgradeShop);
+        Text networkStatus = CreateLabel(canvasObject.transform, string.Empty, new Vector2(0f, 24f), 16);
+        networkStatus.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+        networkStatus.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+        networkStatus.rectTransform.pivot = new Vector2(0.5f, 0f);
+        networkStatus.rectTransform.sizeDelta = new Vector2(520f, 30f);
+        networkStatus.alignment = TextAnchor.LowerCenter;
+        networkStatus.color = new Color(0.6f, 0.85f, 1f);
+
         game.ConnectEvents(eventSystem, eventBanner);
+        game.ConnectNetworkLabel(networkStatus);
         BuildPanels(canvasObject.transform, game, flow);
     }
 
