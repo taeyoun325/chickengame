@@ -213,6 +213,9 @@ public sealed class SelfTest : MonoBehaviour
 
         Check(game.Revenue > revenueBefore, $"매출이 올랐다 ({revenueBefore} → {game.Revenue})");
         Check(game.Streak == streakBefore + quantity, $"콤보가 수량만큼 올랐다 ({game.Streak})");
+
+        // 금액이 공용 메시지 줄에만 나오면 경고 문구에 묻힌다. 번 자리에 떠야 한다.
+        Check(Object.FindAnyObjectByType<MoneyPopup>() != null, "번 자리에 금액이 떠오른다");
     }
 
     /// <summary>배달 주문을 만들고 배달대에 넘겨 스쿠터가 출발하는지 본다.</summary>

@@ -60,6 +60,9 @@ public sealed class DeliverySystem : MonoBehaviour
 
     public int PendingCount => pending.Count;
 
+    /// <summary>스쿠터가 서 있는 자리. 배달 정산을 그 자리에 띄운다.</summary>
+    public Vector3? ScooterPosition => scooter != null ? scooter.position : (Vector3?)null;
+
     /// <summary>대기 중인 배달 주문.</summary>
     public IReadOnlyList<DeliveryOrder> Pending => pending;
 

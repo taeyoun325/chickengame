@@ -54,11 +54,17 @@ public sealed partial class RestaurantGame
         successfulOrders++;
         ChangeReputation(+2);
         PlaySound(GameSound.Delivery);
+
+        // 배달은 스쿠터가 돌아오는 자리에서 정산되므로 그쪽에 띄운다.
+        if (delivery != null && delivery.ScooterPosition.HasValue)
+        {
+            MoneyPopup.Show(delivery.ScooterPosition.Value + Vector3.up * 1.4f,
+                $"+₩{payout:N0}", new Color(0.5f, 0.85f, 1f));
+        }
+
         ShowMessage($"배달 완료! {order.address} +₩{payout:N0}");
     }
 
-    /// <summary>받지 않은 배달 요청이 사라지는 것은 기회를 놓친 것이지 사고가 아니다.
-    /// 예전에는 -5 평판에 실패 집계까지 해서, 배달을 안 하면 하루 만에 폐업했다.</summary>
     /// <summary>배달 중 사고. 음식은 이미 손을 떠났으므로 돈은 못 받고 평판만 깎인다.
     /// 놓친 주문보다 아프지만 폐업으로 직행할 만큼은 아니어야 수습이 가능하다.</summary>
     public void ReportDeliveryCrashed(DeliveryOrder order)
@@ -69,6 +75,8 @@ public sealed partial class RestaurantGame
         ShowMessage($"배달 사고! {order.address} - 치킨을 쏟았습니다");
     }
 
+    /// <summary>받지 않은 배달 요청이 사라지는 것은 기회를 놓친 것이지 사고가 아니다.
+    /// 예전에는 -5 평판에 실패 집계까지 해서, 배달을 안 하면 하루 만에 폐업했다.</summary>
     public void ReportDeliveryMissed(DeliveryOrder order)
     {
         ChangeReputation(-1);
@@ -111,6 +119,7 @@ public sealed partial class RestaurantGame
         NetworkSpawner.Remove(food.gameObject);
         PlaySound(GameSound.Cash);
         GameEffects.Burst(actor.transform.position + Vector3.up * 1.4f, new Color(1f, 0.85f, 0.25f));
+        MoneyPopup.Show(actor.transform.position + Vector3.up * 1.6f, $"+₩{payout:N0}", new Color(1f, 0.88f, 0.3f));
 
         // 여러 마리를 시킨 손님은 다 채워야 자리를 뜬다.
         if (order.Remaining > 0)

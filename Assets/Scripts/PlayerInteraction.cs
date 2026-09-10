@@ -234,6 +234,7 @@ public sealed class PlayerInteraction : MonoBehaviour
         }
 
         RestaurantGame.Instance.ShowMessage("떨어뜨렸습니다! 바닥에 닿은 치킨은 못 씁니다");
+        GameEffects.Burst(spot, new Color(0.6f, 0.45f, 0.25f), 14);
 
         // 튀긴 치킨은 기름을 머금고 있어 떨어진 자리가 미끄러워진다.
         // 생닭은 아직 기름이 없다. 사고가 다음 사고를 부르는 고리가 여기서 시작된다.

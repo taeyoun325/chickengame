@@ -241,6 +241,9 @@ public sealed class HazardSystem : MonoBehaviour
                 NetworkSpawner.Remove(stored.gameObject);
             }
 
+            // 불이 그냥 사라지면 껐는지 저절로 꺼졌는지 알 수 없다. 분말이 터져야 내가 껐다는 게 보인다.
+            GameEffects.Burst(fire.transform.position, new Color(0.92f, 0.94f, 0.98f), 34);
+
             fires.RemoveAt(index);
             NetworkSpawner.Remove(fire.gameObject);
             return true;

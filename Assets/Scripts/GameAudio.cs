@@ -11,7 +11,8 @@ public enum GameSound
     Purchase,
     Delivery,
     Fail,
-    Footstep
+    Footstep,
+    Pack
 }
 
 /// <summary>사운드 에셋 없이 파형을 직접 만들어 쓰는 간이 효과음 뱅크.</summary>
@@ -32,6 +33,7 @@ public sealed class GameAudio : MonoBehaviour
     private AudioClip delivery;
     private AudioClip fail;
     private AudioClip footstep;
+    private AudioClip pack;
 
     private void Awake()
     {
@@ -53,6 +55,9 @@ public sealed class GameAudio : MonoBehaviour
 
         // 발소리는 짧고 둔해야 한다. 길거나 맑으면 걸을 때마다 귀에 걸린다.
         footstep = Tone("Footstep", 0.11f, time => (Noise() * 0.5f + Sine(110f, time) * 0.5f) * Decay(time, 0.11f, 9f));
+
+        // 상자를 닫는 소리. 포장은 조리에서 판매로 넘어가는 지점인데 소리가 없었다.
+        pack = Tone("Pack", 0.18f, time => (Noise() * 0.7f + Square(140f, time) * 0.3f) * Decay(time, 0.18f, 7f) * 0.5f);
     }
 
     public void Play(GameSound sound, float volume = 1f)
@@ -78,6 +83,7 @@ public sealed class GameAudio : MonoBehaviour
             GameSound.Delivery => delivery,
             GameSound.Fail => fail,
             GameSound.Footstep => footstep,
+            GameSound.Pack => pack,
             _ => null
         };
     }

@@ -218,6 +218,7 @@ public sealed partial class RestaurantGame
         }
 
         food.SetState(FoodState.Packaged);
+        PlaySound(GameSound.Pack);
         ShowMessage($"{food.Recipe.displayName} 포장 완료! 계산대로 가져가세요");
     }
 }
