@@ -20,6 +20,15 @@ public sealed class Customer : MonoBehaviour
     private float bobTimer;
 
     public CustomerState State => state;
+
+    private void Start()
+    {
+        // 클라이언트에서도 손님이 실제로 스폰됐는지 확인할 수 있게 남긴다.
+        if (!KitchenNetwork.IsHostSide)
+        {
+            Debug.Log("[Net] 손님 스폰 수신");
+        }
+    }
     public bool HasLeft { get; private set; }
 
     public void Initialise(Vector3 spawnPoint, Vector3 slot, Vector3 exit, Color color)
@@ -63,6 +72,12 @@ public sealed class Customer : MonoBehaviour
 
     private void Update()
     {
+        // 네트워크에서는 호스트만 손님을 움직이고, 나머지는 NetworkTransform 이 위치를 받는다.
+        if (!KitchenNetwork.IsHostSide)
+        {
+            return;
+        }
+
         Vector3 target = state == CustomerState.Leaving ? exitPoint : queueSlot;
         Vector3 flatPosition = new Vector3(transform.position.x, target.y, transform.position.z);
         Vector3 toTarget = target - flatPosition;
@@ -84,7 +99,7 @@ public sealed class Customer : MonoBehaviour
         if (state == CustomerState.Leaving)
         {
             HasLeft = true;
-            Destroy(gameObject);
+            NetworkSpawner.Remove(gameObject);
             return;
         }
 

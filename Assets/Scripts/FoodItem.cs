@@ -17,6 +17,9 @@ public sealed class FoodItem : MonoBehaviour
     public bool sauced;
     public bool dirty;
 
+    /// <summary>튀김기 같은 스테이션에 올려져 있으면 그 스테이션.</summary>
+    public Station RestingStation { get; set; }
+
     private MenuRecipe recipe = MenuDatabase.Fried;
     private Renderer itemRenderer;
 
@@ -29,6 +32,12 @@ public sealed class FoodItem : MonoBehaviour
     {
         itemRenderer = GetComponent<Renderer>();
         RefreshVisual();
+        WorldRegistry.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        WorldRegistry.Unregister(this);
     }
 
     public void SetRecipe(MenuRecipe nextRecipe)

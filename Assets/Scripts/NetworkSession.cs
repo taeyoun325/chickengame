@@ -48,6 +48,9 @@ public sealed class NetworkSession : MonoBehaviour
         manager.NetworkConfig.NetworkTransport = transport;
         manager.NetworkConfig.PlayerPrefab = playerPrefab;
         manager.NetworkConfig.ConnectionApproval = false;
+        RegisterPrefab("NetworkFood");
+        RegisterPrefab("NetworkCustomer");
+        RegisterPrefab("KitchenNetwork");
         manager.OnClientConnectedCallback += OnClientConnected;
         manager.OnClientDisconnectCallback += OnClientDisconnected;
         return true;
@@ -62,6 +65,11 @@ public sealed class NetworkSession : MonoBehaviour
 
         transport.SetConnectionData("0.0.0.0", DefaultPort, "0.0.0.0");
         bool started = manager.StartHost();
+        if (started)
+        {
+            SpawnKitchen();
+        }
+
         Report(started ? $"호스트 시작 (포트 {DefaultPort})" : "호스트 시작 실패");
         return started;
     }
@@ -78,6 +86,32 @@ public sealed class NetworkSession : MonoBehaviour
         bool started = manager.StartClient();
         Report(started ? $"{joinAddress} 에 접속 중..." : "접속 실패");
         return started;
+    }
+
+    private void RegisterPrefab(string resourceName)
+    {
+        GameObject prefab = Resources.Load<GameObject>(resourceName);
+        if (prefab != null)
+        {
+            manager.AddNetworkPrefab(prefab);
+        }
+        else
+        {
+            Debug.LogWarning($"Resources/{resourceName}.prefab 이 없습니다");
+        }
+    }
+
+    /// <summary>가게 상태를 공유하는 오브젝트는 호스트가 하나만 띄운다.</summary>
+    private void SpawnKitchen()
+    {
+        GameObject prefab = Resources.Load<GameObject>("KitchenNetwork");
+        if (prefab == null)
+        {
+            return;
+        }
+
+        GameObject kitchen = Instantiate(prefab);
+        kitchen.GetComponent<NetworkObject>().Spawn();
     }
 
     public void Shutdown()

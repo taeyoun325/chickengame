@@ -107,6 +107,13 @@ public sealed class RestaurantGame : MonoBehaviour
             return;
         }
 
+        // 접속한 손님 화면은 호스트가 보내주는 값만 그린다.
+        if (!KitchenNetwork.IsHostSide)
+        {
+            UpdateHudFromNetwork();
+            return;
+        }
+
         dayTimer += Time.deltaTime;
         orderTimer -= Time.deltaTime;
         messageTimer -= Time.deltaTime;
@@ -157,6 +164,59 @@ public sealed class RestaurantGame : MonoBehaviour
 
         CheckVictory();
         UpdateHud();
+        PublishNetworkState();
+    }
+
+    private void PublishNetworkState()
+    {
+        if (KitchenNetwork.Online)
+        {
+            KitchenNetwork.Instance.PublishState(revenue, day, reputation, BuildOrdersText());
+        }
+    }
+
+    /// <summary>클라이언트 HUD: 호스트가 보내준 값으로만 채운다.</summary>
+    private void UpdateHudFromNetwork()
+    {
+        if (!KitchenNetwork.Online)
+        {
+            return;
+        }
+
+        KitchenNetwork net = KitchenNetwork.Instance;
+        if (revenueLabel != null)
+        {
+            revenueLabel.text = $"REVENUE  ₩{net.Revenue:N0} / ₩{TargetRevenue:N0}";
+        }
+
+        if (dayLabel != null)
+        {
+            dayLabel.text = $"DAY {net.Day}";
+        }
+
+        if (ordersLabel != null)
+        {
+            ordersLabel.text = net.Orders;
+        }
+
+        if (statsLabel != null)
+        {
+            statsLabel.text = $"평판 {net.Reputation}/{MaxReputation}";
+        }
+
+        if (networkLabel != null && NetworkSession.Instance != null)
+        {
+            networkLabel.text = NetworkSession.Instance.BuildStatusText();
+        }
+
+        if (messageTimer > 0f)
+        {
+            messageTimer -= Time.unscaledDeltaTime;
+        }
+        else if (messageLabel != null)
+        {
+            messageLabel.text = string.Empty;
+        }
     }
 
     public void InteractWithStation(PlayerInteraction actor, Station station)
@@ -328,7 +388,7 @@ public sealed class RestaurantGame : MonoBehaviour
         }
 
         string description = actor.HeldFood.Describe();
-        Destroy(actor.HeldFood.gameObject);
+        NetworkSpawner.Remove(actor.HeldFood.gameObject);
         actor.ClearHeldFood();
         wastedFood++;
         ShowMessage($"{description}을 버렸습니다");
@@ -497,7 +557,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
         delivery.Dispatch(order);
         actor.ClearHeldFood();
-        Destroy(food.gameObject);
+        NetworkSpawner.Remove(food.gameObject);
         ShowMessage($"배달 출발! {order.address} ({Mathf.CeilToInt(order.RideTime)}s)");
     }
 
@@ -583,6 +643,17 @@ public sealed class RestaurantGame : MonoBehaviour
 
     public void ShowMessage(string message)
     {
+        ShowLocalMessage(message);
+
+        // 호스트가 처리한 결과는 접속한 손님들에게도 알린다.
+        if (KitchenNetwork.Online && KitchenNetwork.Instance.IsServer)
+        {
+            KitchenNetwork.Instance.BroadcastMessage(message);
+        }
+    }
+
+    public void ShowLocalMessage(string message)
+    {
         if (messageLabel != null)
         {
             messageLabel.text = message;
@@ -623,11 +694,7 @@ public sealed class RestaurantGame : MonoBehaviour
             return;
         }
 
-        GameObject chickenObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        chickenObject.name = "Raw Chicken";
-        chickenObject.transform.localScale = Vector3.one * 0.65f;
-        FoodItem chicken = chickenObject.AddComponent<FoodItem>();
-        chickenObject.AddComponent<FoodTickProxy>();
+        FoodItem chicken = NetworkSpawner.SpawnChicken();
         chicken.SetState(FoodState.Raw);
         actor.SetHeldFood(chicken);
         ShowMessage("생닭을 들었습니다");
@@ -649,7 +716,7 @@ public sealed class RestaurantGame : MonoBehaviour
                 return;
             }
 
-            FoodItem chicken = actor.ReleaseHeldFood(station.transform);
+            FoodItem chicken = actor.ReleaseHeldFoodTo(station);
             chicken.SetState(FoodState.Frying);
             chicken.cookProgress = 0f;
             PlaySound(GameSound.FryStart);
@@ -755,7 +822,7 @@ public sealed class RestaurantGame : MonoBehaviour
         SendCustomerHome(order);
         ReflowQueue();
         actor.ClearHeldFood();
-        Destroy(food.gameObject);
+        NetworkSpawner.Remove(food.gameObject);
         PlaySound(GameSound.Cash);
         GameEffects.Burst(actor.transform.position + Vector3.up * 1.4f, new Color(1f, 0.85f, 0.25f));
         ShowMessage($"주문 #{order.number} {order.recipe.displayName} 완료! +₩{payout:N0}");
@@ -790,11 +857,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
         totalOrders++;
         MenuRecipe recipe = MenuDatabase.RandomFor(day);
-        GameObject customerObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        customerObject.name = $"Customer {totalOrders}";
-        customerObject.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
-        Destroy(customerObject.GetComponent<Collider>());
-        Customer customer = customerObject.AddComponent<Customer>();
+        Customer customer = NetworkSpawner.SpawnCustomer($"Customer {totalOrders}");
         customer.Initialise(DoorPoint, QueueSlot(activeOrders.Count), ExitPoint, recipe.packagedColor);
         activeOrders.Add(new RestaurantOrder(totalOrders, recipe, customer, Difficulty.Patience(OrderPatience, day) * patienceMultiplier));
         PlaySound(GameSound.OrderIn);
@@ -827,6 +890,22 @@ public sealed class RestaurantGame : MonoBehaviour
         }
     }
 
+    private string BuildOrdersText()
+    {
+        if (activeOrders.Count == 0)
+        {
+            return "주문을 기다리는 중...";
+        }
+
+        StringBuilder text = new StringBuilder("ORDERS\n");
+        foreach (RestaurantOrder order in activeOrders)
+        {
+            text.AppendLine($"#{order.number}  {order.recipe.displayName} x1  {Mathf.CeilToInt(order.remainingTime)}s");
+        }
+
+        return text.ToString();
+    }
+
     private void UpdateHud()
     {
         if (revenueLabel != null)
@@ -841,20 +920,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
         if (ordersLabel != null)
         {
-            if (activeOrders.Count == 0)
-            {
-                ordersLabel.text = "주문을 기다리는 중...";
-            }
-            else
-            {
-                StringBuilder text = new StringBuilder("ORDERS\n");
-                foreach (RestaurantOrder order in activeOrders)
-                {
-                    text.AppendLine($"#{order.number}  {order.recipe.displayName} x1  {Mathf.CeilToInt(order.remainingTime)}s");
-                }
-
-                ordersLabel.text = text.ToString();
-            }
+            ordersLabel.text = BuildOrdersText();
         }
 
         if (networkLabel != null && NetworkSession.Instance != null)

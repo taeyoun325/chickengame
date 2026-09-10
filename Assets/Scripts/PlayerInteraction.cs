@@ -3,6 +3,9 @@ using UnityEngine.InputSystem;
 
 public sealed class PlayerInteraction : MonoBehaviour
 {
+    public const float InteractRange = 2.4f;
+    private const float PickupRange = 2f;
+
     private static readonly Key[] ShopKeys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5 };
 
     private Transform holdPoint;
@@ -19,6 +22,12 @@ public sealed class PlayerInteraction : MonoBehaviour
         holdObject.transform.SetParent(transform, false);
         holdObject.transform.localPosition = new Vector3(0f, 1.35f, 0.75f);
         holdPoint = holdObject.transform;
+        WorldRegistry.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        WorldRegistry.Unregister(this);
     }
 
     private void Update()
@@ -41,7 +50,14 @@ public sealed class PlayerInteraction : MonoBehaviour
 
         if (Keyboard.current.fKey.wasPressedThisFrame)
         {
-            DropEverything();
+            if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
+            {
+                KitchenNetwork.Instance.RequestDrop();
+            }
+            else
+            {
+                DropEverything();
+            }
         }
 
         if (Keyboard.current.qKey.wasPressedThisFrame)
@@ -55,7 +71,12 @@ public sealed class PlayerInteraction : MonoBehaviour
     public void SetHeldFood(FoodItem food)
     {
         heldFood = food;
-        food.transform.SetParent(holdPoint, false);
+        if (food.RestingStation != null)
+        {
+            food.RestingStation.Clear();
+        }
+
+        NetworkAttach.Parent(food, holdPoint);
         food.transform.localPosition = Vector3.zero;
         food.transform.localRotation = Quaternion.identity;
         food.SetHeld(true);
@@ -67,7 +88,8 @@ public sealed class PlayerInteraction : MonoBehaviour
         heldFood = null;
     }
 
-    public FoodItem ReleaseHeldFood(Transform target)
+    /// <summary>들고 있던 음식을 스테이션 위에 올려둔다.</summary>
+    public FoodItem ReleaseHeldFoodTo(Station station)
     {
         if (heldFood == null)
         {
@@ -76,11 +98,31 @@ public sealed class PlayerInteraction : MonoBehaviour
 
         FoodItem released = heldFood;
         heldFood = null;
-        released.transform.SetParent(target, false);
-        released.transform.localPosition = Vector3.up * 1.2f;
-        released.transform.localRotation = Quaternion.identity;
+        NetworkAttach.Unparent(released);
+        station.Place(released);
         released.SetHeld(false);
         return released;
+    }
+
+    /// <summary>손이 비어 있으면 근처에 떨어진 음식을 줍는다.</summary>
+    public void TryPickUpNearbyFood()
+    {
+        if (!HandsFree)
+        {
+            return;
+        }
+
+        FoodItem nearbyFood = FindNearbyFood();
+        if (nearbyFood == null)
+        {
+            return;
+        }
+
+        SetHeldFood(nearbyFood);
+        if (RestaurantGame.Instance != null)
+        {
+            RestaurantGame.Instance.ShowMessage($"{nearbyFood.Describe()}을 들었습니다");
+        }
     }
 
     public void TakeExtinguisher()
@@ -120,7 +162,7 @@ public sealed class PlayerInteraction : MonoBehaviour
 
         FoodItem dropped = heldFood;
         heldFood = null;
-        dropped.transform.SetParent(null);
+        NetworkAttach.Unparent(dropped);
         Vector3 spot = transform.position + transform.forward * 0.8f;
         spot.y = 0.35f;
         dropped.transform.position = spot;
@@ -146,7 +188,16 @@ public sealed class PlayerInteraction : MonoBehaviour
     private void SwitchSauce()
     {
         Station station = FindNearbyStation();
-        if (station != null && station.stationType == StationType.Sauce && RestaurantGame.Instance != null)
+        if (station == null || station.stationType != StationType.Sauce)
+        {
+            return;
+        }
+
+        if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
+        {
+            KitchenNetwork.Instance.RequestSauceCycle(station.Index);
+        }
+        else if (RestaurantGame.Instance != null)
         {
             RestaurantGame.Instance.CycleSauce(station);
         }
@@ -169,7 +220,15 @@ public sealed class PlayerInteraction : MonoBehaviour
                 return;
             }
 
-            RestaurantGame.Instance.BuyUpgrade(slot);
+            if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
+            {
+                KitchenNetwork.Instance.RequestUpgrade(slot);
+            }
+            else
+            {
+                RestaurantGame.Instance.BuyUpgrade(slot);
+            }
+
             return;
         }
     }
@@ -187,59 +246,38 @@ public sealed class PlayerInteraction : MonoBehaviour
         }
 
         Station station = FindNearbyStation();
+
+        // 접속한 손님이면 호스트에 요청하고, 호스트/싱글이면 바로 처리한다.
+        if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
+        {
+            if (station != null)
+            {
+                KitchenNetwork.Instance.RequestInteract(station.Index);
+            }
+            else
+            {
+                KitchenNetwork.Instance.RequestPickup();
+            }
+
+            return;
+        }
+
         if (station != null)
         {
             RestaurantGame.Instance.InteractWithStation(this, station);
             return;
         }
 
-        if (HandsFree)
-        {
-            FoodItem nearbyFood = FindNearbyFood();
-            if (nearbyFood != null)
-            {
-                SetHeldFood(nearbyFood);
-                RestaurantGame.Instance.ShowMessage($"{nearbyFood.Describe()}을 들었습니다");
-            }
-        }
+        TryPickUpNearbyFood();
     }
 
-    private Station FindNearbyStation()
+    public Station FindNearbyStation()
     {
-        Station closest = null;
-        float closestDistance = 2.4f;
-        foreach (Station station in FindObjectsByType<Station>(FindObjectsInactive.Exclude))
-        {
-            float distance = Vector3.Distance(transform.position, station.transform.position);
-            if (distance < closestDistance)
-            {
-                closest = station;
-                closestDistance = distance;
-            }
-        }
-
-        return closest;
+        return WorldRegistry.NearestStation(transform.position, InteractRange);
     }
 
     private FoodItem FindNearbyFood()
     {
-        FoodItem closest = null;
-        float closestDistance = 2f;
-        foreach (FoodItem food in FindObjectsByType<FoodItem>(FindObjectsInactive.Exclude))
-        {
-            if (food.state == FoodState.Frying)
-            {
-                continue;
-            }
-
-            float distance = Vector3.Distance(transform.position, food.transform.position);
-            if (distance < closestDistance)
-            {
-                closest = food;
-                closestDistance = distance;
-            }
-        }
-
-        return closest;
+        return WorldRegistry.NearestLooseFood(transform.position, PickupRange);
     }
 }

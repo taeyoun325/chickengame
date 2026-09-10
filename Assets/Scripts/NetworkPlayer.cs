@@ -22,6 +22,7 @@ public sealed class NetworkPlayer : NetworkBehaviour
         }
 
         name = IsOwner ? "Network Player (me)" : $"Network Player {OwnerClientId}";
+        Debug.Log($"[Net] 플레이어 아바타 스폰 id={OwnerClientId} owner={IsOwner}");
 
         // 내 캐릭터만 키보드를 읽고 상호작용한다.
         PlayerController controller = GetComponent<PlayerController>();

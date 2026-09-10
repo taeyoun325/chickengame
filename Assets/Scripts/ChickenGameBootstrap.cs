@@ -5,6 +5,8 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
 {
     private void Start()
     {
+        // 씬을 다시 불러올 때 이전 등록이 남아 있으면 안 된다.
+        WorldRegistry.Clear();
         BuildLighting();
         BuildShop();
         GameObject localPlayers = new GameObject("Local Players");

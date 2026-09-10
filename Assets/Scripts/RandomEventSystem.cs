@@ -47,7 +47,7 @@ public sealed class RandomEventSystem : MonoBehaviour
 
     private void Update()
     {
-        if (game == null)
+        if (game == null || !KitchenNetwork.IsHostSide)
         {
             return;
         }

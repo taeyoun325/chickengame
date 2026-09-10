@@ -65,7 +65,8 @@ public sealed class DeliverySystem : MonoBehaviour
 
     private void Update()
     {
-        if (game == null)
+        // 배달 시뮬레이션은 호스트에서만 돈다.
+        if (game == null || !KitchenNetwork.IsHostSide)
         {
             return;
         }
