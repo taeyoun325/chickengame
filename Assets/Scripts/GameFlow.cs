@@ -419,11 +419,23 @@ public sealed class GameFlow : MonoBehaviour
     private static string BuildRecordLine()
     {
         SaveData data = SaveSystem.Load();
-        if (data == null || data.bestDayRevenue <= 0)
+        if (data == null)
         {
             return string.Empty;
         }
 
-        return $"\n\n최고 기록  DAY {data.bestDay}   하루 매출 ₩{data.bestDayRevenue:N0}";
+        // 이 게임의 기록은 달성 시간이다. 그것부터 보여준다.
+        string line = string.Empty;
+        if (data.bestClearSeconds > 0)
+        {
+            line += $"\n\n최고 기록  ₩10,000,000 달성 {RestaurantGame.Clock(data.bestClearSeconds)}";
+        }
+
+        if (data.bestDayRevenue > 0)
+        {
+            line += $"\n최고 DAY {data.bestDay}   하루 매출 ₩{data.bestDayRevenue:N0}";
+        }
+
+        return line;
     }
 }

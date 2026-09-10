@@ -18,6 +18,12 @@ public sealed class SaveData
     public int bestStreak;
     public int bestDayRevenue;
     public int bestDay;
+
+    /// <summary>목표 매출까지 걸린 최단 시간(초). 0 이면 아직 달성한 적이 없다.</summary>
+    public int bestClearSeconds;
+
+    /// <summary>이어하기로 불러왔을 때 시계가 0 부터 다시 가면 기록이 의미를 잃는다.</summary>
+    public int playSeconds;
     public int[] upgradeLevels = Array.Empty<int>();
     public string savedAt = string.Empty;
 }

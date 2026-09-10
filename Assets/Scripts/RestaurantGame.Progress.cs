@@ -98,8 +98,13 @@ public sealed partial class RestaurantGame
 
     public void SaveProgress()
     {
+        // 최고 기록은 판이 바뀌어도 남아야 하므로, 새로 쓰기 전에 이어받는다.
+        SaveData previous = SaveSystem.Load();
+
         SaveData data = new SaveData
         {
+            bestClearSeconds = previous != null ? previous.bestClearSeconds : 0,
+            playSeconds = Mathf.FloorToInt(playSeconds),
             day = day,
             revenue = revenue,
             totalOrders = totalOrders,
@@ -139,6 +144,7 @@ public sealed partial class RestaurantGame
         bestStreak = data.bestStreak;
         bestDayRevenue = data.bestDayRevenue;
         bestDay = data.bestDay;
+        playSeconds = data.playSeconds;
         if (upgrades != null)
         {
             upgrades.ImportLevels(data.upgradeLevels);
@@ -262,6 +268,14 @@ public sealed partial class RestaurantGame
         }
     }
 
+    /// <summary>셀프테스트가 승리 경로를 밟아 보려고 쓴다. 정상 플레이로 ₩10,000,000 을
+    /// 채우려면 수백 DAY 가 걸려 자동 검증이 불가능하다.</summary>
+    public void AddRevenueForTest(int amount)
+    {
+        revenue += amount;
+        CheckVictory();
+    }
+
     private void CheckVictory()
     {
         if (revenue >= TargetRevenue)
@@ -295,6 +309,15 @@ public sealed partial class RestaurantGame
 
         if (won)
         {
+            // 목표 금액은 정해져 있으므로, 남는 기록은 걸린 시간뿐이다.
+            text.AppendLine($"달성 시간  {Clock(playSeconds)}");
+            string best = RecordClearTime();
+            if (!string.IsNullOrEmpty(best))
+            {
+                text.AppendLine(best);
+            }
+
+            text.AppendLine();
             text.AppendLine("SPACE 를 눌러 처음부터");
             GameFlow.Instance.EnterVictory(text.ToString());
             BroadcastFinish(text.ToString(), true);
@@ -307,6 +330,26 @@ public sealed partial class RestaurantGame
         text.AppendLine("SPACE  처음부터");
         GameFlow.Instance.EnterDefeat(text.ToString());
         BroadcastFinish(text.ToString(), false);
+    }
+
+    /// <summary>최고 기록을 갱신하고, 갱신했으면 그렇다고 알려준다.
+    /// 기록은 이 PC 에 남으므로 호스트 기준이다.</summary>
+    private string RecordClearTime()
+    {
+        SaveData data = SaveSystem.Load() ?? new SaveData();
+        int seconds = Mathf.Max(1, Mathf.FloorToInt(playSeconds));
+
+        if (data.bestClearSeconds <= 0 || seconds < data.bestClearSeconds)
+        {
+            int previous = data.bestClearSeconds;
+            data.bestClearSeconds = seconds;
+            SaveSystem.Save(data);
+            return previous <= 0
+                ? "첫 기록입니다"
+                : $"최고 기록 경신!  이전 {Clock(previous)}";
+        }
+
+        return $"최고 기록  {Clock(data.bestClearSeconds)}";
     }
 
     private static void BroadcastFinish(string report, bool won)

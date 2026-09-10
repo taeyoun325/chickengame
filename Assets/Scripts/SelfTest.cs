@@ -40,6 +40,7 @@ public sealed class SelfTest : MonoBehaviour
         yield return TestDelivery(game);
         TestUpgradeRules(game);
         TestClosureAndReopen(game);
+        TestVictory(game);
 
         game.AutoOrdersEnabled = true;
         Report();
@@ -200,6 +201,24 @@ public sealed class SelfTest : MonoBehaviour
         Check(game.Reputation == 50, $"재기하면 평판이 50 이 된다 (현재 {game.Reputation})");
         Check(game.Revenue <= revenueBefore, $"재기 벌금이 매출에서 빠진다 ({revenueBefore} → {game.Revenue})");
         Check(GameFlow.Instance != null && GameFlow.Instance.IsPlaying, "재기하면 다시 영업 상태가 된다");
+    }
+
+    /// <summary>목표 매출을 넘기면 승리하고, 걸린 시간이 기록으로 남아야 한다.
+    /// 이 게임의 목표는 버티기가 아니라 ₩10,000,000 을 빨리 찍는 것이므로
+    /// 승리 화면에 시간이 나오지 않으면 게임이 성립하지 않는다.
+    ///
+    /// 재기 테스트가 finished 를 되돌려 놓으므로 그 뒤에 실행해야 한다.</summary>
+    private void TestVictory(RestaurantGame game)
+    {
+        Check(game.PlaySeconds > 0f, $"영업 시간이 흐른다 ({RestaurantGame.Clock(game.PlaySeconds)})");
+
+        game.AddRevenueForTest(RestaurantGame.TargetRevenue);
+        Check(GameFlow.Instance != null && GameFlow.Instance.State == GameState.Victory,
+            $"목표 매출을 넘기면 승리한다 (현재 {(GameFlow.Instance != null ? GameFlow.Instance.State.ToString() : "없음")})");
+
+        SaveData record = SaveSystem.Load();
+        Check(record != null && record.bestClearSeconds > 0,
+            $"달성 시간이 기록으로 남는다 ({(record != null ? RestaurantGame.Clock(record.bestClearSeconds) : "없음")})");
     }
 
     /// <summary>원하는 메뉴 하나를 처음부터 포장까지 만든다.</summary>

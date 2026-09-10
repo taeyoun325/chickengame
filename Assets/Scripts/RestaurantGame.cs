@@ -73,6 +73,17 @@ public sealed partial class RestaurantGame : MonoBehaviour
     private int dayStartSuccess;
     private int dayStartFailed;
     private float dayTimer;
+    private float playSeconds;
+
+    /// <summary>영업한 시간의 합. 목표 달성까지 걸린 시간이 곧 이 게임의 기록이다.</summary>
+    public float PlaySeconds => playSeconds;
+
+    /// <summary>기록은 초가 아니라 분:초로 읽어야 감이 온다.</summary>
+    public static string Clock(float seconds)
+    {
+        int whole = Mathf.Max(0, Mathf.FloorToInt(seconds));
+        return $"{whole / 60:00}:{whole % 60:00}";
+    }
     private float orderTimer = 3f;
     private float messageTimer;
     private float hudTimer;
@@ -143,6 +154,13 @@ public sealed partial class RestaurantGame : MonoBehaviour
                 day = startDay;
                 Debug.Log($"[Day] DAY {startDay} 부터 시작");
             }
+            else if (args[index] == "-startrevenue" && int.TryParse(args[index + 1], out int startRevenue) && startRevenue >= 0)
+            {
+                // 목표가 ₩10,000,000 이라 승리 화면까지 정상 플레이로 가려면 수백 DAY 가 걸린다.
+                // 승리 경로를 실제로 밟아 보려면 출발점을 옮겨줄 수밖에 없다.
+                revenue = startRevenue;
+                Debug.Log($"[Day] 매출 ₩{startRevenue:N0} 에서 시작");
+            }
         }
     }
 
@@ -173,6 +191,11 @@ public sealed partial class RestaurantGame : MonoBehaviour
         dayTimer += Time.deltaTime;
         orderTimer -= Time.deltaTime;
         messageTimer -= Time.deltaTime;
+
+        // 이 게임의 목표는 버티기가 아니라 ₩10,000,000 을 얼마나 빨리 찍느냐다.
+        // 그래서 DAY 마다 되감기는 dayTimer 와 별개로, 영업한 시간만 계속 쌓는다.
+        // 일시정지와 결산 화면은 위에서 걸러지므로 여기 시간에 들어가지 않는다.
+        playSeconds += Time.deltaTime;
 
         if (orderTimer <= 0f)
         {
@@ -432,7 +455,7 @@ public sealed partial class RestaurantGame : MonoBehaviour
 
         if (dayLabel != null)
         {
-            dayLabel.text = $"DAY {day}   {Mathf.CeilToInt(dayLength - dayTimer):00}s";
+            dayLabel.text = $"DAY {day}   {Mathf.CeilToInt(dayLength - dayTimer):00}s\n{Clock(playSeconds)}";
         }
 
         if (ordersLabel != null)
