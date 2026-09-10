@@ -40,10 +40,39 @@ public sealed class NetworkPlayer : NetworkBehaviour
             characterController.enabled = IsOwner;
         }
 
+        if (!IsOwner)
+        {
+            AddBlockingBody(characterController);
+        }
+
         if (IsOwner)
         {
             transform.position = new Vector3(-2f + OwnerClientId * 1.6f, 1.2f, -1f);
             FirstPersonView.SetSubject(transform);
         }
+    }
+
+    /// <summary>남의 캐릭터는 CharacterController 를 꺼두므로 콜라이더가 사라져
+    /// 서로 몸을 그대로 통과했다. 좁은 주방에서 서로 부딪히고 길을 막는 것이
+    /// 이 게임의 재미이므로, 움직이지 않는 몸통 콜라이더를 따로 붙여준다.
+    ///
+    /// CharacterController 를 켜두는 대신 캡슐을 쓰는 이유는, 켜두면
+    /// NetworkTransform 이 매 프레임 밀어 넣는 위치와 서로 간섭하기 때문이다.</summary>
+    private void AddBlockingBody(CharacterController shape)
+    {
+        if (GetComponent<CapsuleCollider>() != null)
+        {
+            return;
+        }
+
+        CapsuleCollider body = gameObject.AddComponent<CapsuleCollider>();
+        if (shape == null)
+        {
+            return;
+        }
+
+        body.height = shape.height;
+        body.radius = shape.radius;
+        body.center = shape.center;
     }
 }

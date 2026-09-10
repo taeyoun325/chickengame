@@ -31,6 +31,8 @@ public sealed class SelfTest : MonoBehaviour
             yield break;
         }
 
+        TestLayout();
+
         // 검증 중에는 손님이 저절로 들어오면 결과가 흔들린다.
         game.AutoOrdersEnabled = false;
 
@@ -48,6 +50,66 @@ public sealed class SelfTest : MonoBehaviour
 
         game.AutoOrdersEnabled = true;
         Report();
+    }
+
+    /// <summary>가게 배치가 조작을 방해하지 않는지 본다.
+    ///
+    /// 상호작용 반경이 2.4m 라 스테이션이 그보다 가까우면 조준을 해도 엉뚱한 것이 잡힌다.
+    /// 가게가 코드로 지어지므로 좌표를 손대다가 이런 겹침을 만들기 쉽다.</summary>
+    private void TestLayout()
+    {
+        float worst = float.MaxValue;
+        string worstPair = string.Empty;
+
+        for (int a = 0; a < WorldRegistry.Stations.Count; a++)
+        {
+            Station first = WorldRegistry.Stations[a];
+            if (first == null || !first.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            for (int b = a + 1; b < WorldRegistry.Stations.Count; b++)
+            {
+                Station second = WorldRegistry.Stations[b];
+                if (second == null || !second.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                float gap = Vector3.Distance(first.transform.position, second.transform.position);
+                if (gap < worst)
+                {
+                    worst = gap;
+                    worstPair = $"{first.name} - {second.name}";
+                }
+            }
+        }
+
+        Check(worst >= PlayerInteraction.InteractRange,
+            $"스테이션이 상호작용 반경보다 붙어 있지 않다 (가장 가까운 쌍 {worstPair} {worst:0.0}m)");
+
+        // 한 바퀴가 지나치게 길면 달리기만 하는 게임이 된다.
+        float loop = LoopDistance();
+        Check(loop > 0f && loop < 40f, $"조리 한 바퀴 동선이 {loop:0.0}m");
+    }
+
+    /// <summary>냉장고 → 튀김기 → 포장대 → 계산대 → 냉장고 한 바퀴.</summary>
+    private static float LoopDistance()
+    {
+        Station fridge = FindStation(StationType.Fridge);
+        Station fryer = FindStation(StationType.Fryer);
+        Station packing = FindStation(StationType.Packing);
+        Station checkout = FindStation(StationType.Checkout);
+        if (fridge == null || fryer == null || packing == null || checkout == null)
+        {
+            return 0f;
+        }
+
+        return Vector3.Distance(fridge.transform.position, fryer.transform.position)
+               + Vector3.Distance(fryer.transform.position, packing.transform.position)
+               + Vector3.Distance(packing.transform.position, checkout.transform.position)
+               + Vector3.Distance(checkout.transform.position, fridge.transform.position);
     }
 
     /// <summary>냉장고 → 튀김기 → 익음 → 탐 순서가 실제로 진행되는지 본다.</summary>
