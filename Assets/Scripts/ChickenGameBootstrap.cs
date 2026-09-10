@@ -57,7 +57,24 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     {
         ParticleSystem steam = GameEffects.CreateSteam(station.transform, new Vector3(0f, 1.2f, 0f));
         station.gameObject.AddComponent<FryerSteam>().Bind(station, steam);
+        AddOilSurface(station.transform);
         return station;
+    }
+
+    /// <summary>튀김기에 맞는 모델이 에셋에 없어 블록으로 남겼다. 대신 상판에 기름을 앉혀
+    /// 튀김기로 읽히게 한다. 증설로 켜고 끄는 예비 튀김기도 따라가도록 자식으로 붙인다.</summary>
+    private static void AddOilSurface(Transform fryer)
+    {
+        GameObject oil = GameMaterials.CreatePrimitive(PrimitiveType.Cube, "Oil", new Color(0.18f, 0.12f, 0.04f));
+        Destroy(oil.GetComponent<Collider>());
+        oil.transform.SetParent(fryer, false);
+
+        // 부모가 눌린 만큼 되돌려 실제 크기로 앉힌다.
+        Vector3 scale = fryer.localScale;
+        oil.transform.localScale = new Vector3(2f / scale.x, 0.06f / scale.y, 1.2f / scale.z);
+
+        // 큐브는 한 변이 1 이라 상판은 배율과 무관하게 로컬 0.5 다. 그 바로 아래에 앉힌다.
+        oil.transform.localPosition = new Vector3(0f, 0.49f, 0f);
     }
 
     private GameObject BuildScooter()
@@ -102,6 +119,38 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateStation("Delivery Counter", StationType.Delivery, new Vector3(-4f, 0.8f, -2.8f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.15f, 0.45f, 0.85f));
         CreateStation("Checkout", StationType.Checkout, new Vector3(4f, 0.8f, -2.8f), new Vector3(2.5f, 1.6f, 1.5f), new Color(0.25f, 0.65f, 0.35f));
         CreateBlock("Customer Queue", new Vector3(0f, 0.2f, -4.5f), new Vector3(11f, 0.4f, 0.5f), new Color(0.9f, 0.25f, 0.25f));
+        BuildDecor();
+    }
+
+    /// <summary>가게를 채우는 장식. 1인칭에서는 빈 바닥이 그대로 보이므로 이게 없으면
+    /// 도형만 떠 있는 시험장처럼 느껴진다.
+    ///
+    /// 손님이 지나는 길(z 는 -5 ~ -2, 가운데 통로)과 조리 라인은 비워 둔다.
+    /// 소품에는 콜라이더가 없어 몸이 통과하지만, 눈에 걸리면 길이 좁아 보인다.</summary>
+    private static void BuildDecor()
+    {
+        // 손님이 앉는 자리. 줄 서는 곳 바깥, 좌우 벽 쪽에 둔다.
+        PlaceDiningSet(new Vector3(7f, 0f, -4.6f));
+        PlaceDiningSet(new Vector3(-7f, 0f, -4.6f));
+
+        // 벽에 거는 것들. 메뉴판은 손님이 줄을 서서 보는 방향에 건다.
+        PropVisual.Place("Cafe_Board_1", new Vector3(2.5f, 2.2f, 5.6f), new Vector3(2.2f, 1.4f, 0.2f), 180f);
+        PropVisual.Place("Cafe_Shelf_with_hooks_1", new Vector3(-8.5f, 2.2f, 2f), new Vector3(0.4f, 0.5f, 1.8f), 90f);
+
+        // 구석의 화분. 서 있는 자리와 겹치지 않게 벽에 붙인다.
+        PropVisual.Place("Cafe_Plant_1", new Vector3(8.3f, 0f, -5.4f), new Vector3(0.7f, 0.9f, 0.7f));
+        PropVisual.Place("Cafe_Plant_1", new Vector3(-8.3f, 0f, -5.4f), new Vector3(0.7f, 0.9f, 0.7f));
+
+        // 배달 차량은 문 밖에 세워 둔다. 스쿠터가 오가는 곳이라 자리가 맞는다.
+        PropVisual.Place("Van", new Vector3(5.5f, 0f, -9f), new Vector3(4.6f, 2.4f, 2.4f), 90f);
+    }
+
+    /// <summary>탁자 하나에 의자 둘. 마주 보게 놓는다.</summary>
+    private static void PlaceDiningSet(Vector3 centre)
+    {
+        PropVisual.Place("Cafe_Table_1", centre, new Vector3(1.4f, 0.9f, 1.4f));
+        PropVisual.Place("DinnerChair", centre + new Vector3(0f, 0f, -1.1f), new Vector3(1f, 1.3f, 1f));
+        PropVisual.Place("DinnerChair", centre + new Vector3(0f, 0f, 1.1f), new Vector3(1f, 1.3f, 1f), 180f);
     }
 
     /// <summary>화면이 하나이고 시점이 1인칭이므로 로컬 캐릭터는 나 하나다.
@@ -328,9 +377,34 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         station.stationType = type;
 
         // 소품은 겉모습만 바꾼다. 충돌과 조준 판정은 블록이 그대로 맡는다.
-        AttachProp(stationObject, type);
-        StationLabel.Attach(station, KoreanName(type), scale.y * 0.5f + 0.35f);
+        GameObject prop = AttachProp(stationObject, type);
+
+        // 이름표는 실제로 보이는 것 바로 위에 떠야 한다. 블록보다 낮은 가구를 얹으면
+        // 블록 높이로 계산한 이름표가 허공에 뜬다.
+        StationLabel.Attach(station, KoreanName(type), LabelHeight(stationObject, prop, scale));
         return station;
+    }
+
+    private static float LabelHeight(GameObject stationObject, GameObject prop, Vector3 scale)
+    {
+        float blockHeight = scale.y * 0.5f + 0.35f;
+        if (prop == null)
+        {
+            return blockHeight;
+        }
+
+        float top = float.NegativeInfinity;
+        foreach (Renderer renderer in prop.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer != null && renderer.gameObject.activeInHierarchy)
+            {
+                top = Mathf.Max(top, renderer.bounds.max.y);
+            }
+        }
+
+        return float.IsNegativeInfinity(top)
+            ? blockHeight
+            : Mathf.Max(top - stationObject.transform.position.y + 0.35f, 0.5f);
     }
 
     /// <summary>스테이션마다 어울리는 가구를 얹는다. 덩치가 맞는 가구는 블록을 대신하고,
@@ -338,29 +412,18 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     ///
     /// 튀김기와 쓰레기통, 소화기는 에셋에 맞는 모델이 없어 색이 분명한 블록으로 남긴다.
     /// 주방에서 제일 급하게 찾는 것들이라 오히려 그 편이 눈에 잘 띈다.</summary>
-    private static void AttachProp(GameObject stationObject, StationType type)
+    private static GameObject AttachProp(GameObject stationObject, StationType type)
     {
-        switch (type)
+        return type switch
         {
-            case StationType.Fridge:
-                PropVisual.Attach(stationObject, "Freezer");
-                break;
-            case StationType.Sauce:
-                PropVisual.Attach(stationObject, "Cafe_Cabinet_1");
-                break;
-            case StationType.Packing:
-                PropVisual.Attach(stationObject, "Dinner_Table");
-                break;
-            case StationType.Checkout:
-                PropVisual.Attach(stationObject, "Cafe_Cafe_Cash_Register_1", PropVisual.Placement.OnTop);
-                break;
-            case StationType.Delivery:
-                PropVisual.Attach(stationObject, "Dinner_Stand", PropVisual.Placement.OnTop);
-                break;
-            case StationType.Upgrade:
-                PropVisual.Attach(stationObject, "Cafe_Shelf_1", PropVisual.Placement.OnTop);
-                break;
-        }
+            StationType.Fridge => PropVisual.Attach(stationObject, "Freezer"),
+            StationType.Sauce => PropVisual.Attach(stationObject, "Cafe_Cabinet_1"),
+            StationType.Packing => PropVisual.Attach(stationObject, "Dinner_Table"),
+            StationType.Checkout => PropVisual.Attach(stationObject, "Cafe_Cafe_Cash_Register_1", PropVisual.Placement.OnTop),
+            StationType.Delivery => PropVisual.Attach(stationObject, "Dinner_Stand", PropVisual.Placement.OnTop),
+            StationType.Upgrade => PropVisual.Attach(stationObject, "Cafe_Shelf_1", PropVisual.Placement.OnTop),
+            _ => null
+        };
     }
 
     /// <summary>어느 블록이 무엇인지 한눈에 보이도록 붙이는 이름.</summary>

@@ -1,10 +1,7 @@
 using UnityEngine;
 
 /// <summary>도형 위에 에셋 프리팹을 얹는다. 도형은 그대로 남아 충돌과 조준 판정을 맡고
-/// 보이는 것만 바뀌므로, 겉모습을 바꿔도 게임 감각은 검증된 그대로다.
-///
-/// 들여온 팩들은 모두 URP 로 만들어져 있고 이 프로젝트는 빌트인 파이프라인이라,
-/// 머티리얼을 그대로 두면 전부 자홍색으로 나온다. 옮겨 담는 일도 여기서 한다.</summary>
+/// 보이는 것만 바뀌므로, 겉모습을 바꿔도 게임 감각은 검증된 그대로다.</summary>
 public static class PropVisual
 {
     private const string Folder = "Props/";
@@ -65,6 +62,29 @@ public static class PropVisual
         FitInside(prop.transform, hostBounds, placement);
         Repaint(prop.GetComponentsInChildren<Renderer>(true));
         return prop;
+    }
+
+    /// <summary>스테이션이 아닌 자리에 장식용으로 놓는다. floor 는 바닥에 닿는 지점이고
+    /// box 는 이 자리에 내줄 공간이다. 소품은 그 안에 들어가도록 맞춰진다.
+    ///
+    /// box 는 회전을 적용한 뒤의 월드 축 기준이다. 90도 돌려 세우는 소품은 x 와 z 를
+    /// 바꿔서 넘겨야 제 크기로 선다. 회전은 90도 단위로 쓴다 - 비스듬하면 경계 상자가
+    /// 부풀어 소품이 실제보다 작게 줄어든다.</summary>
+    public static GameObject Place(string propName, Vector3 floor, Vector3 box, float rotationY = 0f)
+    {
+        GameObject anchor = new GameObject("Decor " + propName);
+        anchor.transform.position = floor + Vector3.up * (box.y * 0.5f);
+        anchor.transform.rotation = Quaternion.Euler(0f, rotationY, 0f);
+        anchor.transform.localScale = box;
+
+        if (Attach(anchor, propName) != null)
+        {
+            return anchor;
+        }
+
+        // 에셋이 없으면 빈 껍데기를 남기지 않는다.
+        Object.Destroy(anchor);
+        return null;
     }
 
     /// <summary>도형 상자에 들어가도록 맞춘다. 에셋들은 실제 크기로 만들어져 있으므로
