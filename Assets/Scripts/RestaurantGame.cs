@@ -82,6 +82,10 @@ public sealed class RestaurantGame : MonoBehaviour
     public int Day => day;
     public int Revenue => revenue;
     public int Reputation => reputation;
+    public int Streak => streak;
+
+    /// <summary>대기 중인 매장 주문. HUD 와 자동 검증에서 읽는다.</summary>
+    public IReadOnlyList<RestaurantOrder> ActiveOrders => activeOrders;
 
     private float dayLength = DefaultDayLength;
 
@@ -441,6 +445,8 @@ public sealed class RestaurantGame : MonoBehaviour
         actor.TakeExtinguisher();
         ShowMessage("소화기를 들었습니다. 불 앞에서 E");
     }
+
+    public DeliverySystem Delivery => delivery;
 
     public void ConnectDelivery(DeliverySystem system, Text deliveryText)
     {

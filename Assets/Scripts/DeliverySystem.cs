@@ -49,6 +49,15 @@ public sealed class DeliverySystem : MonoBehaviour
     private int nextNumber = 1;
 
     public int PendingCount => pending.Count;
+
+    /// <summary>대기 중인 배달 주문.</summary>
+    public IReadOnlyList<DeliveryOrder> Pending => pending;
+
+    /// <summary>자동 검증에서 배달 주문을 바로 하나 만들 때 쓴다.</summary>
+    public void ForceRequest()
+    {
+        CreateRequest();
+    }
     public int RidingCount => riding.Count;
     public int CompletedDeliveries { get; private set; }
     public int MissedDeliveries { get; private set; }

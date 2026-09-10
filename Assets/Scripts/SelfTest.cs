@@ -32,6 +32,9 @@ public sealed class SelfTest : MonoBehaviour
 
         yield return TestCookingPipeline(game);
         yield return TestSauceAndPacking(game);
+        yield return TestOrderCheckout(game);
+        yield return TestDelivery(game);
+        TestUpgradeRules(game);
 
         Report();
     }
@@ -95,6 +98,106 @@ public sealed class SelfTest : MonoBehaviour
 
         game.InteractWithStation(actor, FindStation(StationType.Packing));
         Check(actor.HeldFood != null && actor.HeldFood.state == FoodState.Packaged, "포장했다");
+    }
+
+    /// <summary>주문을 하나 만들어 그 메뉴를 그대로 만들어 팔고, 매출이 오르는지 본다.</summary>
+    private IEnumerator TestOrderCheckout(RestaurantGame game)
+    {
+        PlayerInteraction actor = WorldRegistry.Players.Count > 0 ? WorldRegistry.Players[0] : null;
+        if (actor == null)
+        {
+            yield break;
+        }
+
+        ClearHands(game, actor);
+        game.SpawnOrderBurst(1);
+        Check(game.ActiveOrders.Count > 0, "주문이 들어왔다");
+        if (game.ActiveOrders.Count == 0)
+        {
+            yield break;
+        }
+
+        MenuRecipe wanted = game.ActiveOrders[0].recipe;
+        int revenueBefore = game.Revenue;
+        int streakBefore = game.Streak;
+
+        yield return MakeMenu(game, actor, wanted);
+        Check(actor.HeldFood != null && actor.HeldFood.state == FoodState.Packaged,
+            $"{wanted.displayName} 포장 완성");
+
+        game.InteractWithStation(actor, FindStation(StationType.Checkout));
+        Check(actor.HeldFood == null, "계산대에 넘겼다");
+        Check(game.Revenue > revenueBefore, $"매출이 올랐다 ({revenueBefore} → {game.Revenue})");
+        Check(game.Streak == streakBefore + 1, $"콤보가 올랐다 ({game.Streak})");
+    }
+
+    /// <summary>배달 주문을 만들고 배달대에 넘겨 스쿠터가 출발하는지 본다.</summary>
+    private IEnumerator TestDelivery(RestaurantGame game)
+    {
+        PlayerInteraction actor = WorldRegistry.Players.Count > 0 ? WorldRegistry.Players[0] : null;
+        DeliverySystem deliverySystem = game.Delivery;
+        if (actor == null || deliverySystem == null)
+        {
+            yield break;
+        }
+
+        ClearHands(game, actor);
+        deliverySystem.ForceRequest();
+        Check(deliverySystem.PendingCount > 0, "배달 주문이 들어왔다");
+        if (deliverySystem.PendingCount == 0)
+        {
+            yield break;
+        }
+
+        MenuRecipe wanted = deliverySystem.Pending[0].recipe;
+        int ridingBefore = deliverySystem.RidingCount;
+
+        yield return MakeMenu(game, actor, wanted);
+        game.InteractWithStation(actor, FindStation(StationType.Delivery));
+        Check(actor.HeldFood == null, "배달대에 넘겼다");
+        Check(deliverySystem.RidingCount == ridingBefore + 1, "스쿠터가 출발했다");
+    }
+
+    /// <summary>돈이 없으면 업그레이드가 팔리지 않아야 한다.</summary>
+    private void TestUpgradeRules(RestaurantGame game)
+    {
+        Station desk = FindStation(StationType.Upgrade);
+        Check(desk != null, "업그레이드 데스크가 있다");
+
+        int revenue = game.Revenue;
+        game.BuyUpgrade(0);
+        bool affordable = revenue >= 120_000;
+        Check(affordable || game.Revenue == revenue, "자금이 모자라면 결제되지 않는다");
+    }
+
+    /// <summary>원하는 메뉴 하나를 처음부터 포장까지 만든다.</summary>
+    private IEnumerator MakeMenu(RestaurantGame game, PlayerInteraction actor, MenuRecipe wanted)
+    {
+        Station fryer = FindStation(StationType.Fryer);
+        game.InteractWithStation(actor, FindStation(StationType.Fridge));
+        game.InteractWithStation(actor, fryer);
+        yield return new WaitForSeconds(6f);
+        game.InteractWithStation(actor, fryer);
+
+        if (wanted.needsSauce)
+        {
+            Station sauce = FindStation(StationType.Sauce);
+            if (sauce != null)
+            {
+                sauce.sauceKind = wanted.kind;
+                game.InteractWithStation(actor, sauce);
+            }
+        }
+
+        game.InteractWithStation(actor, FindStation(StationType.Packing));
+    }
+
+    private static void ClearHands(RestaurantGame game, PlayerInteraction actor)
+    {
+        if (actor.HeldFood != null)
+        {
+            game.InteractWithStation(actor, FindStation(StationType.Trash));
+        }
     }
 
     private static Station FindStation(StationType type)
