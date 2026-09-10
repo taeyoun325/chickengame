@@ -29,6 +29,10 @@ public sealed class GameFlow : MonoBehaviour
     private Text resultText;
     private GameObject localPlayerRoot;
     private float autoAdvanceTimer;
+    private bool typingAddress;
+    private string typedAddress = string.Empty;
+
+    private const string LastAddressKey = "chickengame.lastAddress";
 
     // 밸런스 측정도 하루가 자동으로 넘어가야 진행된다.
     private static bool AutoAdvanceDays =>
@@ -114,6 +118,12 @@ public sealed class GameFlow : MonoBehaviour
             return;
         }
 
+        if (typingAddress)
+        {
+            UpdateAddressEntry(keyboard);
+            return;
+        }
+
         switch (state)
         {
             case GameState.Title:
@@ -131,7 +141,7 @@ public sealed class GameFlow : MonoBehaviour
                 }
                 else if (keyboard.jKey.wasPressedThisFrame)
                 {
-                    StartNetworkGame(host: false);
+                    BeginAddressEntry();
                 }
 
                 break;
@@ -172,15 +182,91 @@ public sealed class GameFlow : MonoBehaviour
         }
     }
 
+    /// <summary>친구 PC 에 붙으려면 주소를 칠 수 있어야 한다.
+    /// 지난번 주소를 기억해 두어 다음 판은 Enter 한 번이면 된다.</summary>
+    private void BeginAddressEntry()
+    {
+        typingAddress = true;
+        typedAddress = PlayerPrefs.GetString(LastAddressKey, "127.0.0.1");
+        RefreshTitleText();
+    }
+
+    private void UpdateAddressEntry(Keyboard keyboard)
+    {
+        if (keyboard.escapeKey.wasPressedThisFrame)
+        {
+            typingAddress = false;
+            RefreshTitleText();
+            return;
+        }
+
+        if (keyboard.backspaceKey.wasPressedThisFrame && typedAddress.Length > 0)
+        {
+            typedAddress = typedAddress.Substring(0, typedAddress.Length - 1);
+            RefreshTitleText();
+            return;
+        }
+
+        if (keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame)
+        {
+            string address = string.IsNullOrWhiteSpace(typedAddress) ? "127.0.0.1" : typedAddress.Trim();
+            PlayerPrefs.SetString(LastAddressKey, address);
+            PlayerPrefs.Save();
+            typingAddress = false;
+            StartNetworkGame(false, address);
+            return;
+        }
+
+        AppendTypedCharacters(keyboard);
+    }
+
+    /// <summary>주소에 쓰이는 숫자와 점만 받는다.</summary>
+    private void AppendTypedCharacters(Keyboard keyboard)
+    {
+        if (typedAddress.Length >= 21)
+        {
+            return;
+        }
+
+        for (int digit = 0; digit <= 9; digit++)
+        {
+            Key key = Key.Digit0 + digit;
+            Key numpad = Key.Numpad0 + digit;
+            if (keyboard[key].wasPressedThisFrame || keyboard[numpad].wasPressedThisFrame)
+            {
+                typedAddress += (char)('0' + digit);
+                RefreshTitleText();
+                return;
+            }
+        }
+
+        if (keyboard[Key.Period].wasPressedThisFrame || keyboard[Key.NumpadPeriod].wasPressedThisFrame)
+        {
+            typedAddress += '.';
+            RefreshTitleText();
+        }
+    }
+
+    private void RefreshTitleText()
+    {
+        if (titleText == null)
+        {
+            return;
+        }
+
+        titleText.text = typingAddress
+            ? "호스트 주소를 입력하세요\n\n" + typedAddress + "_\n\n" +
+              "숫자와 . 만 입력됩니다\nENTER 접속      BACKSPACE 지우기      ESC 취소"
+            : BuildTitleText();
+    }
+
     public void EnterTitle()
     {
         state = GameState.Title;
         Time.timeScale = 0f;
+        typingAddress = false;
         SetPanels(title: true);
-        if (titleText != null)
-        {
-            titleText.text = BuildTitleText();
-        }
+        RefreshTitleText();
     }
 
     private void StartGame(bool continueSave)
