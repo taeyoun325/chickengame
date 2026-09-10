@@ -41,10 +41,19 @@ public sealed class PlayerInteraction : MonoBehaviour
         // 1인칭이라 손은 눈보다 아래, 화면 오른쪽에 있어야 시야를 가리지 않고 보인다.
         holdObject.transform.localPosition = new Vector3(0.42f, 0.3f, 0.85f);
         holdPoint = holdObject.transform;
+    }
+
+    /// <summary>등록은 켜져 있는 동안만 유지한다.
+    ///
+    /// 온라인으로 넘어가면 로컬 캐릭터는 꺼지지만 파괴되지는 않는다. 예전처럼
+    /// Awake/OnDestroy 로 등록하면 아무도 조종하지 않는 몸이 등록부에 남아,
+    /// 사고 판정 같은 전체 순회가 그 몸까지 대상으로 삼는다.</summary>
+    private void OnEnable()
+    {
         WorldRegistry.Register(this);
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
         WorldRegistry.Unregister(this);
     }
