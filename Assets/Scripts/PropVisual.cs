@@ -54,6 +54,16 @@ public static class PropVisual
         }
 
         // 캐릭터용으로 만들어진 모델은 애니메이터가 붙어 있어 가만히 두면 혼자 움직인다.
+        //
+        // 딸려온 스크립트도 함께 걷어낸다. 애니메이터만 지우면, 그것을 붙들고 있던
+        // 스크립트가 다음 프레임에 null 을 참조해 예외를 던진다. 치킨 팩의
+        // anim_clip_offset 이 실제로 그래서, 치킨이 생길 때마다 예외가 쌓였다.
+        // 소품은 움직이지 않는 장식이므로 팩이 딸려 보낸 동작은 하나도 필요 없다.
+        foreach (MonoBehaviour behaviour in prop.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            Object.Destroy(behaviour);
+        }
+
         foreach (Animator animator in prop.GetComponentsInChildren<Animator>(true))
         {
             Object.Destroy(animator);

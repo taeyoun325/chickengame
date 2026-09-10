@@ -188,6 +188,15 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         GameObject root = new GameObject("Local Players");
         GameObject player = BuildPlayerBody(0, root.transform);
         player.AddComponent<LocalPlayerInput>();
+
+        // 밸런스 측정은 2~4 인 협동을 재야 의미가 있는데, 평소 로컬은 1인칭이라
+        // 몸이 하나뿐이다. 측정할 때만 봇이 쓸 몸을 더 만든다. 입력은 붙이지 않는다 -
+        // BalanceTest 가 직접 조종한다.
+        for (int index = 1; index < BalanceTest.RequestedBots; index++)
+        {
+            BuildPlayerBody(index, root.transform);
+        }
+
         return root;
     }
 

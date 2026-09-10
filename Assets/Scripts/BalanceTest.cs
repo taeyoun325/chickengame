@@ -18,6 +18,22 @@ public sealed class BalanceTest : MonoBehaviour
 
     public static bool Requested => Argument("-balancetest") != null;
 
+    /// <summary>측정에 쓸 봇 수. 이 게임은 2~4 인 협동이므로 한 명만 재면
+    /// 혼자 하는 사람의 하한선만 나오고 정작 설계한 인원수의 균형은 알 수 없다.
+    /// 평소 플레이는 1인칭이라 로컬 캐릭터가 하나뿐이므로, 측정할 때만 더 만든다.</summary>
+    public static int RequestedBots
+    {
+        get
+        {
+            if (Requested && int.TryParse(Argument("-bots"), out int bots) && bots > 0)
+            {
+                return Mathf.Clamp(bots, 1, 4);
+            }
+
+            return 1;
+        }
+    }
+
     private static string Argument(string name)
     {
         string[] args = System.Environment.GetCommandLineArgs();
