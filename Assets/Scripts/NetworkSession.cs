@@ -31,6 +31,14 @@ public sealed class NetworkSession : MonoBehaviour
             return true;
         }
 
+        // 씬을 다시 불러온 뒤에도 예전 NetworkManager 가 남아 있으면 그것을 쓴다.
+        if (NetworkManager.Singleton != null)
+        {
+            manager = NetworkManager.Singleton;
+            transport = manager.GetComponent<UnityTransport>();
+            return transport != null;
+        }
+
         GameObject playerPrefab = Resources.Load<GameObject>(PlayerPrefabResource);
         if (playerPrefab == null)
         {
@@ -114,13 +122,23 @@ public sealed class NetworkSession : MonoBehaviour
         kitchen.GetComponent<NetworkObject>().Spawn();
     }
 
+    /// <summary>세션을 끊고 NetworkManager 까지 정리한다. 씬을 다시 불러오기 전에 호출한다.</summary>
     public void Shutdown()
     {
-        if (manager != null && (manager.IsServer || manager.IsClient))
+        if (manager == null)
+        {
+            return;
+        }
+
+        if (manager.IsServer || manager.IsClient)
         {
             manager.Shutdown();
             Report("연결을 종료했습니다");
         }
+
+        Destroy(manager.gameObject);
+        manager = null;
+        transport = null;
     }
 
     public string BuildStatusText()

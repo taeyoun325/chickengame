@@ -11,7 +11,7 @@ public sealed class KitchenNetwork : NetworkBehaviour
     private readonly NetworkVariable<int> netRevenue = new NetworkVariable<int>();
     private readonly NetworkVariable<int> netDay = new NetworkVariable<int>(1);
     private readonly NetworkVariable<int> netReputation = new NetworkVariable<int>(100);
-    private readonly NetworkVariable<FixedString512Bytes> netOrders = new NetworkVariable<FixedString512Bytes>();
+    private readonly NetworkVariable<FixedString4096Bytes> netOrders = new NetworkVariable<FixedString4096Bytes>();
 
     /// <summary>네트워크 세션이 살아 있고 이 오브젝트가 스폰됐을 때만 참이다.</summary>
     public static bool Online => Instance != null && Instance.IsSpawned;
@@ -38,6 +38,8 @@ public sealed class KitchenNetwork : NetworkBehaviour
     }
 
     /// <summary>호스트가 매 프레임 최신 상태를 밀어 넣는다.</summary>
+    private float publishTimer;
+
     public void PublishState(int revenue, int day, int reputation, string orders)
     {
         if (!IsServer)
@@ -45,44 +47,52 @@ public sealed class KitchenNetwork : NetworkBehaviour
             return;
         }
 
+        publishTimer -= Time.deltaTime;
+        if (publishTimer > 0f)
+        {
+            return;
+        }
+
+        publishTimer = 0.2f;
+
         netRevenue.Value = revenue;
         netDay.Value = day;
         netReputation.Value = reputation;
-        if (orders.Length > 480)
+        if (orders.Length > 900)
         {
-            orders = orders.Substring(0, 480);
+            orders = orders.Substring(0, 900);
         }
 
-        netOrders.Value = new FixedString512Bytes(orders);
+        netOrders.Value = new FixedString4096Bytes(orders);
     }
 
     public void RequestInteract(int stationIndex)
     {
-        InteractServerRpc(stationIndex, NetworkManager.Singleton.LocalClientId);
+        InteractRpc(stationIndex, NetworkManager.Singleton.LocalClientId);
     }
 
     public void RequestPickup()
     {
-        PickupServerRpc(NetworkManager.Singleton.LocalClientId);
+        PickupRpc(NetworkManager.Singleton.LocalClientId);
     }
 
     public void RequestDrop()
     {
-        DropServerRpc(NetworkManager.Singleton.LocalClientId);
+        DropRpc(NetworkManager.Singleton.LocalClientId);
     }
 
     public void RequestSauceCycle(int stationIndex)
     {
-        SauceServerRpc(stationIndex);
+        SauceRpc(stationIndex);
     }
 
     public void RequestUpgrade(int slot)
     {
-        UpgradeServerRpc(slot);
+        UpgradeRpc(slot);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void InteractServerRpc(int stationIndex, ulong clientId)
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void InteractRpc(int stationIndex, ulong clientId)
     {
         Station station = WorldRegistry.StationAt(stationIndex);
         PlayerInteraction actor = FindActor(clientId);
@@ -92,8 +102,8 @@ public sealed class KitchenNetwork : NetworkBehaviour
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void PickupServerRpc(ulong clientId)
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void PickupRpc(ulong clientId)
     {
         PlayerInteraction actor = FindActor(clientId);
         if (actor != null)
@@ -102,8 +112,8 @@ public sealed class KitchenNetwork : NetworkBehaviour
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void DropServerRpc(ulong clientId)
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void DropRpc(ulong clientId)
     {
         PlayerInteraction actor = FindActor(clientId);
         if (actor != null)
@@ -112,8 +122,8 @@ public sealed class KitchenNetwork : NetworkBehaviour
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void SauceServerRpc(int stationIndex)
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void SauceRpc(int stationIndex)
     {
         Station station = WorldRegistry.StationAt(stationIndex);
         if (station != null && station.stationType == StationType.Sauce && RestaurantGame.Instance != null)
@@ -122,8 +132,8 @@ public sealed class KitchenNetwork : NetworkBehaviour
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void UpgradeServerRpc(int slot)
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void UpgradeRpc(int slot)
     {
         if (RestaurantGame.Instance != null)
         {
@@ -131,8 +141,50 @@ public sealed class KitchenNetwork : NetworkBehaviour
         }
     }
 
+    /// <summary>하루 결산을 접속한 플레이어들에게도 띄운다.</summary>
+    public void BroadcastSettlement(string report)
+    {
+        if (!IsServer || !IsSpawned)
+        {
+            return;
+        }
+
+        if (report.Length > 900)
+        {
+            report = report.Substring(0, 900);
+        }
+
+        SettlementRpc(new FixedString4096Bytes(report));
+    }
+
+    [Rpc(SendTo.NotServer)]
+    private void SettlementRpc(FixedString4096Bytes report)
+    {
+        if (GameFlow.Instance != null)
+        {
+            GameFlow.Instance.EnterSettlement(report.ToString());
+        }
+    }
+
+    public void BroadcastResume()
+    {
+        if (IsServer && IsSpawned)
+        {
+            ResumeRpc();
+        }
+    }
+
+    [Rpc(SendTo.NotServer)]
+    private void ResumeRpc()
+    {
+        if (GameFlow.Instance != null)
+        {
+            GameFlow.Instance.ResumeFromSettlement();
+        }
+    }
+
     /// <summary>중요한 알림은 모두에게 보여준다.</summary>
-    public void BroadcastMessage(string message)
+    public void BroadcastNotice(string message)
     {
         if (!IsServer || !IsSpawned)
         {
@@ -144,11 +196,11 @@ public sealed class KitchenNetwork : NetworkBehaviour
             message = message.Substring(0, 120);
         }
 
-        MessageClientRpc(new FixedString128Bytes(message));
+        NoticeRpc(new FixedString128Bytes(message));
     }
 
-    [ClientRpc]
-    private void MessageClientRpc(FixedString128Bytes message)
+    [Rpc(SendTo.NotServer)]
+    private void NoticeRpc(FixedString128Bytes message)
     {
         if (!IsServer && RestaurantGame.Instance != null)
         {

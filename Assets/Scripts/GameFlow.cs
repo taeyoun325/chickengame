@@ -139,7 +139,8 @@ public sealed class GameFlow : MonoBehaviour
 
                 break;
             case GameState.Settlement:
-                if (keyboard.spaceKey.wasPressedThisFrame && game != null)
+                // 접속한 플레이어는 호스트가 다음 DAY 를 시작할 때까지 기다린다.
+                if (keyboard.spaceKey.wasPressedThisFrame && game != null && KitchenNetwork.IsHostSide)
                 {
                     game.StartNextDay();
                 }
@@ -228,6 +229,7 @@ public sealed class GameFlow : MonoBehaviour
 
     public void EnterSettlement(string report)
     {
+        Debug.Log("[Day] 결산 화면");
         state = GameState.Settlement;
         Time.timeScale = 0f;
         if (settlementText != null)
@@ -272,6 +274,13 @@ public sealed class GameFlow : MonoBehaviour
     private void Restart()
     {
         Time.timeScale = 1f;
+
+        // 네트워크 세션을 정리하지 않고 씬을 다시 불러오면 NetworkManager 가 중복된다.
+        if (NetworkSession.Instance != null)
+        {
+            NetworkSession.Instance.Shutdown();
+        }
+
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 

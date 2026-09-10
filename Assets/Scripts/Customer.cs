@@ -20,15 +20,6 @@ public sealed class Customer : MonoBehaviour
     private float bobTimer;
 
     public CustomerState State => state;
-
-    private void Start()
-    {
-        // 클라이언트에서도 손님이 실제로 스폰됐는지 확인할 수 있게 남긴다.
-        if (!KitchenNetwork.IsHostSide)
-        {
-            Debug.Log("[Net] 손님 스폰 수신");
-        }
-    }
     public bool HasLeft { get; private set; }
 
     public void Initialise(Vector3 spawnPoint, Vector3 slot, Vector3 exit, Color color)

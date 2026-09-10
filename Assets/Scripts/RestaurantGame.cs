@@ -27,7 +27,7 @@ public sealed class RestaurantGame : MonoBehaviour
     public static RestaurantGame Instance { get; private set; }
 
     public const int TargetRevenue = 10_000_000;
-    private const float DayLength = 600f;
+    private const float DefaultDayLength = 600f;
     private const float BaseOrderInterval = 12f;
     private const float OrderPatience = 45f;
     private const float BaseFryTime = 5f;
@@ -83,11 +83,28 @@ public sealed class RestaurantGame : MonoBehaviour
     public int Revenue => revenue;
     public int Reputation => reputation;
 
+    private float dayLength = DefaultDayLength;
+
     private void Awake()
     {
         Instance = this;
         GameTuning.Reset();
         Time.timeScale = 1f;
+        ReadDayLengthArgument();
+    }
+
+    /// <summary>-daylength 60 처럼 하루 길이를 줄여 결산까지 빠르게 확인할 수 있다.</summary>
+    private void ReadDayLengthArgument()
+    {
+        string[] args = System.Environment.GetCommandLineArgs();
+        for (int index = 0; index < args.Length - 1; index++)
+        {
+            if (args[index] == "-daylength" && float.TryParse(args[index + 1], out float seconds) && seconds >= 10f)
+            {
+                dayLength = seconds;
+                Debug.Log($"[Day] 하루 길이를 {seconds}초로 설정");
+            }
+        }
     }
 
     public void ConnectHud(Text revenueText, Text dayText, Text ordersText, Text messageText, Text statsText)
@@ -152,7 +169,7 @@ public sealed class RestaurantGame : MonoBehaviour
             ReflowQueue();
         }
 
-        if (dayTimer >= DayLength)
+        if (dayTimer >= dayLength)
         {
             EndDay();
         }
@@ -293,11 +310,17 @@ public sealed class RestaurantGame : MonoBehaviour
         text.AppendLine();
         text.AppendLine("SPACE 를 눌러 다음 DAY 시작");
 
+        Debug.Log($"[Day] DAY {day} 결산 - 매출 {revenue}");
         SaveProgress();
 
         if (GameFlow.Instance != null)
         {
             GameFlow.Instance.EnterSettlement(text.ToString());
+        }
+
+        if (KitchenNetwork.Online && KitchenNetwork.Instance.IsServer)
+        {
+            KitchenNetwork.Instance.BroadcastSettlement(text.ToString());
         }
     }
 
@@ -306,6 +329,11 @@ public sealed class RestaurantGame : MonoBehaviour
         if (GameFlow.Instance != null)
         {
             GameFlow.Instance.ResumeFromSettlement();
+        }
+
+        if (KitchenNetwork.Online && KitchenNetwork.Instance.IsServer)
+        {
+            KitchenNetwork.Instance.BroadcastResume();
         }
 
         day++;
@@ -648,7 +676,7 @@ public sealed class RestaurantGame : MonoBehaviour
         // 호스트가 처리한 결과는 접속한 손님들에게도 알린다.
         if (KitchenNetwork.Online && KitchenNetwork.Instance.IsServer)
         {
-            KitchenNetwork.Instance.BroadcastMessage(message);
+            KitchenNetwork.Instance.BroadcastNotice(message);
         }
     }
 
@@ -915,7 +943,7 @@ public sealed class RestaurantGame : MonoBehaviour
 
         if (dayLabel != null)
         {
-            dayLabel.text = $"DAY {day}   {Mathf.CeilToInt(DayLength - dayTimer):00}s";
+            dayLabel.text = $"DAY {day}   {Mathf.CeilToInt(dayLength - dayTimer):00}s";
         }
 
         if (ordersLabel != null)
@@ -961,6 +989,12 @@ public sealed class FoodTickProxy : MonoBehaviour
 
     private void Update()
     {
+        // 조리 진행은 호스트만 계산한다. 클라이언트는 FoodSync 가 보내주는 상태만 본다.
+        if (!KitchenNetwork.IsHostSide)
+        {
+            return;
+        }
+
         if (RestaurantGame.Instance != null && food != null)
         {
             RestaurantGame.Instance.TickFood(food, Time.deltaTime);
