@@ -30,8 +30,9 @@ public sealed class GameFlow : MonoBehaviour
     private GameObject localPlayerRoot;
     private float autoAdvanceTimer;
 
+    // 밸런스 측정도 하루가 자동으로 넘어가야 진행된다.
     private static bool AutoAdvanceDays =>
-        System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-autoday") >= 0;
+        System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-autoday") >= 0 || BalanceTest.Requested;
 
     public GameState State => state;
     public bool IsPlaying => state == GameState.Playing;
@@ -194,7 +195,7 @@ public sealed class GameFlow : MonoBehaviour
         }
 
         state = GameState.Playing;
-        Time.timeScale = 1f;
+        GameSpeed.Resume();
         SetPanels();
     }
 
@@ -223,7 +224,7 @@ public sealed class GameFlow : MonoBehaviour
         }
 
         state = GameState.Playing;
-        Time.timeScale = 1f;
+        GameSpeed.Resume();
         SetPanels();
     }
 
@@ -237,7 +238,7 @@ public sealed class GameFlow : MonoBehaviour
     public void Resume()
     {
         state = GameState.Playing;
-        Time.timeScale = 1f;
+        GameSpeed.Resume();
         SetPanels();
     }
 
@@ -258,7 +259,7 @@ public sealed class GameFlow : MonoBehaviour
     public void ResumeFromSettlement()
     {
         state = GameState.Playing;
-        Time.timeScale = 1f;
+        GameSpeed.Resume();
         SetPanels();
     }
 
@@ -288,7 +289,7 @@ public sealed class GameFlow : MonoBehaviour
 
     private void Restart()
     {
-        Time.timeScale = 1f;
+        GameSpeed.Resume();
 
         // 네트워크 세션을 정리하지 않고 씬을 다시 불러오면 NetworkManager 가 중복된다.
         if (NetworkSession.Instance != null)

@@ -93,6 +93,11 @@ public sealed partial class RestaurantGame : MonoBehaviour
     public int Reputation => reputation;
     public int Streak => streak;
 
+    /// <summary>업그레이드로 쓴 돈까지 포함한 실제 벌어들인 총액.</summary>
+    public int GrossEarned => revenue + spending;
+    public int SuccessfulOrders => successfulOrders;
+    public int FailedOrders => failedOrders;
+
     /// <summary>대기 중인 매장 주문. HUD 와 자동 검증에서 읽는다.</summary>
     public IReadOnlyList<RestaurantOrder> ActiveOrders => activeOrders;
 
@@ -105,7 +110,7 @@ public sealed partial class RestaurantGame : MonoBehaviour
     {
         Instance = this;
         GameTuning.Reset();
-        Time.timeScale = 1f;
+        GameSpeed.Resume();
         ReadQaArguments();
     }
 

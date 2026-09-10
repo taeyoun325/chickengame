@@ -75,6 +75,12 @@ ChickenGame.exe -mode host -selftest -verbose -logFile selftest-host.log
 `-autoday` 는 결산 화면을 자동으로 넘겨 무인 장시간 테스트를 돌릴 때 쓰고,
 `-verbose` 는 스폰과 네트워크 진단 로그를 켭니다.
 
+봇으로 밸런스를 측정한 결과는 `BALANCE.md` 에 정리했습니다.
+
+```
+ChickenGame.exe -mode local -balancetest 5 -daylength 120 -logFile balance.log
+```
+
 ## 멀티플레이
 
 호스트가 먼저 열고, 같은 네트워크의 친구가 호스트 IP로 접속합니다. 기본 포트는 `7777` 입니다.

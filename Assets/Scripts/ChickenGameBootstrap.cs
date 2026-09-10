@@ -38,6 +38,11 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         {
             gameObject.AddComponent<SelfTest>();
         }
+
+        if (BalanceTest.Requested)
+        {
+            gameObject.AddComponent<BalanceTest>();
+        }
     }
 
     /// <summary>증설로 열리는 2, 3번 튀김기를 미리 만들어 두고 꺼둔다.</summary>
