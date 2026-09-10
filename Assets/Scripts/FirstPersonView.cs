@@ -23,6 +23,7 @@ public sealed class FirstPersonView : MonoBehaviour
     private float sensitivity = 0.12f;
     private float bobPhase;
     private float bobAmount;
+    private float lastStepPhase;
     private float shakeTimer;
     private float shakeDuration;
     private float shakeStrength;
@@ -189,9 +190,21 @@ public sealed class FirstPersonView : MonoBehaviour
         float speed = subjectMotor != null ? subjectMotor.PlanarSpeed : 0f;
         float target = Mathf.Clamp01(speed / 5f);
         bobAmount = Mathf.MoveTowards(bobAmount, target, Time.deltaTime * 4f);
-        if (bobAmount > 0.001f)
+        if (bobAmount <= 0.001f)
         {
-            bobPhase += Time.deltaTime * BobSpeed * Mathf.Max(0.35f, target);
+            return;
+        }
+
+        bobPhase += Time.deltaTime * BobSpeed * Mathf.Max(0.35f, target);
+
+        // 발소리는 시야가 출렁이는 주기에 맞춘다. 반 바퀴가 한 걸음이다.
+        if (bobAmount > 0.15f && bobPhase - lastStepPhase >= Mathf.PI)
+        {
+            lastStepPhase = bobPhase;
+            if (GameAudio.Instance != null)
+            {
+                GameAudio.Instance.Play(GameSound.Footstep, 0.35f * bobAmount);
+            }
         }
     }
 

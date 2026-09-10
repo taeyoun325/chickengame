@@ -10,7 +10,8 @@ public enum GameSound
     Slip,
     Purchase,
     Delivery,
-    Fail
+    Fail,
+    Footstep
 }
 
 /// <summary>사운드 에셋 없이 파형을 직접 만들어 쓰는 간이 효과음 뱅크.</summary>
@@ -30,6 +31,7 @@ public sealed class GameAudio : MonoBehaviour
     private AudioClip purchase;
     private AudioClip delivery;
     private AudioClip fail;
+    private AudioClip footstep;
 
     private void Awake()
     {
@@ -48,14 +50,17 @@ public sealed class GameAudio : MonoBehaviour
         purchase = Tone("Purchase", 0.32f, time => Sine(660f + time * 900f, time) * Decay(time, 0.32f, 4f) * 0.7f);
         delivery = Tone("Delivery", 0.4f, time => Sine(520f + Mathf.Sin(time * 30f) * 60f, time) * Decay(time, 0.4f, 3.5f) * 0.6f);
         fail = Tone("Fail", 0.5f, time => Square(220f - time * 180f, time) * Decay(time, 0.5f, 3f) * 0.45f);
+
+        // 발소리는 짧고 둔해야 한다. 길거나 맑으면 걸을 때마다 귀에 걸린다.
+        footstep = Tone("Footstep", 0.11f, time => (Noise() * 0.5f + Sine(110f, time) * 0.5f) * Decay(time, 0.11f, 9f));
     }
 
-    public void Play(GameSound sound)
+    public void Play(GameSound sound, float volume = 1f)
     {
         AudioClip clip = Resolve(sound);
         if (clip != null && source != null)
         {
-            source.PlayOneShot(clip);
+            source.PlayOneShot(clip, volume);
         }
     }
 
@@ -72,6 +77,7 @@ public sealed class GameAudio : MonoBehaviour
             GameSound.Purchase => purchase,
             GameSound.Delivery => delivery,
             GameSound.Fail => fail,
+            GameSound.Footstep => footstep,
             _ => null
         };
     }
