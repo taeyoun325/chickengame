@@ -96,17 +96,23 @@ public static class PropVisual
             return;
         }
 
-        Vector3 size = bounds.size;
+        // 잰 값에는 부모 배율이 이미 곱해져 있다. 스테이션 블록은 (2.4, 1.6, 1.6) 처럼
+        // 눌려 있으므로 나누어 모델 본래 크기로 되돌린 뒤에 계산해야 한다.
+        // 이걸 빼먹으면 배율이 두 번 곱해져 소품이 부모 배율만큼 작아진다.
+        Vector3 parentScale = prop.parent != null ? prop.parent.lossyScale : Vector3.one;
+        Vector3 natural = Divide(bounds.size, parentScale);
+        Vector3 naturalCentre = Divide(bounds.center, parentScale);
+        float naturalBottom = bounds.min.y / Mathf.Max(0.001f, parentScale.y);
 
         // 위에 올리는 소품은 상자 높이를 다 쓰면 안 되고, 상판에 얹힐 만큼만 크면 된다.
         float allowedHeight = placement == Placement.OnTop ? hostBounds.size.y * 0.9f : hostBounds.size.y;
         float fit = Mathf.Min(
-            hostBounds.size.x / Mathf.Max(0.001f, size.x),
-            allowedHeight / Mathf.Max(0.001f, size.y),
-            hostBounds.size.z / Mathf.Max(0.001f, size.z));
+            hostBounds.size.x / Mathf.Max(0.001f, natural.x),
+            allowedHeight / Mathf.Max(0.001f, natural.y),
+            hostBounds.size.z / Mathf.Max(0.001f, natural.z));
         fit = Mathf.Min(1f, fit);
 
-        Vector3 parentScale = prop.parent != null ? prop.parent.lossyScale : Vector3.one;
+        // 부모 배율을 되돌려, 눌린 블록에 얹어도 소품은 제 비율로 선다.
         prop.localScale = new Vector3(
             fit / Mathf.Max(0.001f, parentScale.x),
             fit / Mathf.Max(0.001f, parentScale.y),
@@ -115,11 +121,19 @@ public static class PropVisual
         // 모델마다 원점이 발밑일 수도 한가운데일 수도 있어, 잰 경계로 직접 맞춰야 한다.
         float floor = placement == Placement.OnTop ? hostBounds.max.y : hostBounds.min.y;
         prop.position = new Vector3(
-            hostBounds.center.x - fit * bounds.center.x,
-            floor - fit * bounds.min.y,
-            hostBounds.center.z - fit * bounds.center.z);
+            hostBounds.center.x - fit * naturalCentre.x,
+            floor - fit * naturalBottom,
+            hostBounds.center.z - fit * naturalCentre.z);
 
-        GameLog.Verbose($"[Prop] {prop.name} 모델 {size} → 상자 {hostBounds.size} 배율 {fit:0.00} {placement}");
+        GameLog.Verbose($"[Prop] {prop.name} 모델 {natural} → 상자 {hostBounds.size} 배율 {fit:0.00} {placement}");
+    }
+
+    private static Vector3 Divide(Vector3 value, Vector3 divisor)
+    {
+        return new Vector3(
+            value.x / Mathf.Max(0.001f, divisor.x),
+            value.y / Mathf.Max(0.001f, divisor.y),
+            value.z / Mathf.Max(0.001f, divisor.z));
     }
 
     /// <summary>배율 1 인 상태에서 잰 모델 경계. 원점 기준 상대값이다.</summary>

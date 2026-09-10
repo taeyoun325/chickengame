@@ -74,16 +74,23 @@ public sealed class CharacterVisual : MonoBehaviour
             return;
         }
 
-        float fit = targetHeight / Mathf.Max(0.01f, bounds.size.y);
+        // 잰 값에는 몸통 캡슐의 배율이 이미 곱해져 있다. 나누어 모델 본래 크기로 되돌리지
+        // 않으면 배율이 두 번 곱해져 사람이 캡슐 배율만큼 작아진다.
         Vector3 parentScale = transform.lossyScale;
+        float naturalHeight = bounds.size.y / Mathf.Max(0.01f, parentScale.y);
+        float naturalBottom = bounds.min.y / Mathf.Max(0.01f, parentScale.y);
+
+        float fit = targetHeight / Mathf.Max(0.01f, naturalHeight);
         model.localScale = new Vector3(
             fit / Mathf.Max(0.01f, parentScale.x),
             fit / Mathf.Max(0.01f, parentScale.y),
             fit / Mathf.Max(0.01f, parentScale.z));
 
-        // 몸통 바닥과 모델 발바닥을 맞춘다. bounds 는 모델을 배율 1 로 두고 잰 값이다.
-        float halfHeight = parentScale.y;
-        model.localPosition = new Vector3(0f, (-halfHeight - fit * bounds.min.y) / Mathf.Max(0.01f, parentScale.y), 0f);
+        // 몸통 바닥과 모델 발바닥을 맞춘다.
+        model.position = new Vector3(
+            transform.position.x,
+            transform.position.y - parentScale.y - fit * naturalBottom,
+            transform.position.z);
     }
 
     /// <summary>배율 1 상태의 모델 경계. 스킨드 메시는 bounds 가 로컬 기준이라 그대로 쓸 수 있다.</summary>

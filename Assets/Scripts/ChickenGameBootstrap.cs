@@ -133,6 +133,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         PlaceDiningSet(new Vector3(7f, 0f, -4.6f));
         PlaceDiningSet(new Vector3(-7f, 0f, -4.6f));
 
+        // 긴 카페 카운터는 벽을 따라 세워야 제 비율이 나온다.
+        PropVisual.Place("Cafe_Cabinet_1", new Vector3(4.5f, 0f, 5.4f), new Vector3(6.4f, 1.1f, 0.8f));
+
         // 벽에 거는 것들. 메뉴판은 손님이 줄을 서서 보는 방향에 건다.
         PropVisual.Place("Cafe_Board_1", new Vector3(2.5f, 2.2f, 5.6f), new Vector3(2.2f, 1.4f, 0.2f), 180f);
         PropVisual.Place("Cafe_Shelf_with_hooks_1", new Vector3(-8.5f, 2.2f, 2f), new Vector3(0.4f, 0.5f, 1.8f), 90f);
@@ -417,7 +420,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         return type switch
         {
             StationType.Fridge => PropVisual.Attach(stationObject, "Freezer"),
-            StationType.Sauce => PropVisual.Attach(stationObject, "Cafe_Cabinet_1"),
+            // 긴 카페 카운터(6.5m)를 스테이션 상자에 우겨넣으면 납작하게 눌린다.
+            // 양념대는 작업대 높이가 나오는 탁자가 맞다.
+            StationType.Sauce => PropVisual.Attach(stationObject, "Cafe_Table_1"),
             StationType.Packing => PropVisual.Attach(stationObject, "Dinner_Table"),
             StationType.Checkout => PropVisual.Attach(stationObject, "Cafe_Cafe_Cash_Register_1", PropVisual.Placement.OnTop),
             StationType.Delivery => PropVisual.Attach(stationObject, "Dinner_Stand", PropVisual.Placement.OnTop),
