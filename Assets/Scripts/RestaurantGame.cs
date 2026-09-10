@@ -55,6 +55,8 @@ public sealed partial class RestaurantGame : MonoBehaviour
     private int reputation = MaxReputation;
     private int streak;
     private int bestStreak;
+    private int bestDayRevenue;
+    private int bestDay;
     private bool finished;
     private HazardSystem hazards;
     private int dayStartNetRevenue;
@@ -171,6 +173,9 @@ public sealed partial class RestaurantGame : MonoBehaviour
             if (order.customer != null)
             {
                 order.customer.ShowPatience(order.remainingTime / order.patience);
+                order.customer.ShowTag(order.quantity > 1
+                    ? $"{order.recipe.displayName} {order.delivered}/{order.quantity}  {Mathf.CeilToInt(order.remainingTime)}s"
+                    : $"{order.recipe.displayName}  {Mathf.CeilToInt(order.remainingTime)}s");
             }
 
             if (order.remainingTime <= 0f)

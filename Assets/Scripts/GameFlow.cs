@@ -295,10 +295,23 @@ public sealed class GameFlow : MonoBehaviour
     private static string BuildTitleText()
     {
         string continueLine = SaveSystem.HasSave ? "C  이어하기" : "저장된 기록 없음";
+        string recordLine = BuildRecordLine();
         return "CHICKEN GAME\n\n" +
                "누적 매출 ₩10,000,000 을 목표로\n치킨집을 운영하세요\n\n" +
                "SPACE  로컬 2인 새 게임\n" + continueLine + "\n" +
                "H  호스트로 열기      J  호스트에 접속\n\n" +
-               "P1 WASD+E   P2 IJKL+O   게임패드 자동 인식\nESC 일시정지";
+               "P1 WASD+E   P2 IJKL+O   게임패드 자동 인식\nESC 일시정지" + recordLine;
+    }
+
+    /// <summary>이전 기록이 있으면 타이틀에 함께 보여준다.</summary>
+    private static string BuildRecordLine()
+    {
+        SaveData data = SaveSystem.Load();
+        if (data == null || data.bestDayRevenue <= 0)
+        {
+            return string.Empty;
+        }
+
+        return $"\n\n최고 기록  DAY {data.bestDay}   하루 매출 ₩{data.bestDayRevenue:N0}";
     }
 }

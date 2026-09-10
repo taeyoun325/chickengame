@@ -77,6 +77,7 @@ public static class ChickenGameNetworkPrefab
         Object.DestroyImmediate(customer.GetComponent<Collider>());
         customer.AddComponent<Customer>();
         customer.AddComponent<NetworkObject>();
+        customer.AddComponent<CustomerSync>();
         NetworkTransform transform = customer.AddComponent<NetworkTransform>();
         transform.AuthorityMode = NetworkTransform.AuthorityModes.Server;
         PrefabUtility.SaveAsPrefabAsset(customer, ResourcesFolder + "/NetworkCustomer.prefab");

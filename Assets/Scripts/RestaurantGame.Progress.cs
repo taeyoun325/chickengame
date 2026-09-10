@@ -12,6 +12,16 @@ public sealed partial class RestaurantGame
         dayTimer = 0f;
 
         int dayRevenue = revenue + spending - dayStartNetRevenue;
+        if (dayRevenue > bestDayRevenue)
+        {
+            bestDayRevenue = dayRevenue;
+        }
+
+        if (day > bestDay)
+        {
+            bestDay = day;
+        }
+
         int dayOrders = totalOrders - dayStartOrders;
         int daySuccess = successfulOrders - dayStartSuccess;
         int dayFailed = failedOrders - dayStartFailed;
@@ -84,6 +94,8 @@ public sealed partial class RestaurantGame
             spending = spending,
             reputation = reputation,
             bestStreak = bestStreak,
+            bestDayRevenue = bestDayRevenue,
+            bestDay = bestDay,
             upgradeLevels = upgrades != null ? upgrades.ExportLevels() : System.Array.Empty<int>()
         };
 
@@ -109,6 +121,8 @@ public sealed partial class RestaurantGame
         spending = data.spending;
         reputation = data.reputation > 0 ? data.reputation : MaxReputation;
         bestStreak = data.bestStreak;
+        bestDayRevenue = data.bestDayRevenue;
+        bestDay = data.bestDay;
         if (upgrades != null)
         {
             upgrades.ImportLevels(data.upgradeLevels);

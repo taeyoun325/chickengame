@@ -16,6 +16,8 @@ public sealed class SaveData
     public int spending;
     public int reputation = 100;
     public int bestStreak;
+    public int bestDayRevenue;
+    public int bestDay;
     public int[] upgradeLevels = Array.Empty<int>();
     public string savedAt = string.Empty;
 }

@@ -18,6 +18,7 @@ public sealed class Customer : MonoBehaviour
     private Renderer bodyRenderer;
     private Color baseColor;
     private float bobTimer;
+    private TextMesh tagMesh;
 
     public CustomerState State => state;
 
@@ -38,6 +39,57 @@ public sealed class Customer : MonoBehaviour
         {
             bodyRenderer.material.color = color;
         }
+    }
+
+    /// <summary>머리 위에 무엇을 기다리는지 띄운다.</summary>
+    public string CurrentTag { get; private set; } = string.Empty;
+
+    public void ShowTag(string text)
+    {
+        CurrentTag = text;
+        if (tagMesh == null)
+        {
+            tagMesh = CreateTag();
+        }
+
+        if (tagMesh != null)
+        {
+            tagMesh.text = text;
+        }
+    }
+
+    private TextMesh CreateTag()
+    {
+        GameObject tagObject = new GameObject("Order Tag");
+        tagObject.transform.SetParent(transform, false);
+
+        Vector3 scale = transform.lossyScale;
+        tagObject.transform.localScale = new Vector3(
+            1f / Mathf.Max(0.01f, scale.x),
+            1f / Mathf.Max(0.01f, scale.y),
+            1f / Mathf.Max(0.01f, scale.z));
+        tagObject.transform.localPosition = new Vector3(0f, 1.35f, 0f);
+
+        TextMesh mesh = tagObject.AddComponent<TextMesh>();
+        mesh.characterSize = 0.06f;
+        mesh.fontSize = 60;
+        mesh.anchor = TextAnchor.LowerCenter;
+        mesh.alignment = TextAlignment.Center;
+        mesh.color = Color.white;
+
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                    ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+        if (font != null)
+        {
+            mesh.font = font;
+            MeshRenderer meshRenderer = tagObject.GetComponent<MeshRenderer>();
+            if (meshRenderer != null)
+            {
+                meshRenderer.sharedMaterial = font.material;
+            }
+        }
+
+        return mesh;
     }
 
     public void SetQueueSlot(Vector3 slot)
@@ -64,6 +116,14 @@ public sealed class Customer : MonoBehaviour
         }
 
         bodyRenderer.material.color = Color.Lerp(new Color(0.85f, 0.15f, 0.1f), baseColor, Mathf.Clamp01(normalized));
+    }
+
+    private void LateUpdate()
+    {
+        if (tagMesh != null && Camera.main != null)
+        {
+            tagMesh.transform.rotation = Camera.main.transform.rotation;
+        }
     }
 
     private void Update()
