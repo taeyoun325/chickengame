@@ -297,7 +297,26 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         GameObject stationObject = CreateBlock(name, position, scale, color);
         Station station = stationObject.AddComponent<Station>();
         station.stationType = type;
+        StationLabel.Attach(station, KoreanName(type), scale.y * 0.5f + 0.35f);
         return station;
+    }
+
+    /// <summary>어느 블록이 무엇인지 한눈에 보이도록 붙이는 이름.</summary>
+    private static string KoreanName(StationType type)
+    {
+        return type switch
+        {
+            StationType.Fridge => "냉장고",
+            StationType.Fryer => "튀김기",
+            StationType.Sauce => "양념대",
+            StationType.Packing => "포장대",
+            StationType.Checkout => "계산대",
+            StationType.Delivery => "배달대",
+            StationType.Upgrade => "업그레이드",
+            StationType.Trash => "쓰레기통",
+            StationType.Extinguisher => "소화기",
+            _ => type.ToString()
+        };
     }
 
     private static GameObject CreateBlock(string name, Vector3 position, Vector3 scale, Color color)
