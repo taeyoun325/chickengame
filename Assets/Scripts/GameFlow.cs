@@ -299,6 +299,6 @@ public sealed class GameFlow : MonoBehaviour
                "누적 매출 ₩10,000,000 을 목표로\n치킨집을 운영하세요\n\n" +
                "SPACE  로컬 2인 새 게임\n" + continueLine + "\n" +
                "H  호스트로 열기      J  호스트에 접속\n\n" +
-               "P1 WASD + E     P2 IJKL + E\nESC 일시정지";
+               "P1 WASD+E   P2 IJKL+O   게임패드 자동 인식\nESC 일시정지";
     }
 }

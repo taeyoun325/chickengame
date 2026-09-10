@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 7680489658563959445}
   - component: {fileID: 7261274107548176340}
   - component: {fileID: 7731306662647869756}
-  - component: {fileID: 4748532772157473442}
+  - component: {fileID: 4276736776660976309}
   - component: {fileID: 8301379076529591874}
   - component: {fileID: 7644171451763095773}
   - component: {fileID: 36873912809938164}
@@ -136,7 +136,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMotor
   moveSpeed: 5
   gravity: -20
---- !u!114 &4748532772157473442
+--- !u!114 &4276736776660976309
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -145,9 +145,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 8724284052332940755}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 33f1e8593a6fa9c40bdc886db0e332b2, type: 3}
+  m_Script: {fileID: 11500000, guid: c2c3b7e565ac8ee49876cb5d64f048a1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  m_EditorClassIdentifier: Assembly-CSharp::LocalPlayerInput
+  scheme: 0
+  gamepadIndex: 0
 --- !u!114 &8301379076529591874
 MonoBehaviour:
   m_ObjectHideFlags: 0

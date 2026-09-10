@@ -1,12 +1,9 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public sealed class PlayerInteraction : MonoBehaviour
 {
     public const float InteractRange = 2.4f;
     private const float PickupRange = 2f;
-
-    private static readonly Key[] ShopKeys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5 };
 
     private Transform holdPoint;
     private FoodItem heldFood;
@@ -30,42 +27,54 @@ public sealed class PlayerInteraction : MonoBehaviour
         WorldRegistry.Unregister(this);
     }
 
-    private void Update()
+    /// <summary>F 키/게임패드 X. 네트워크에서는 호스트에 요청한다.</summary>
+    public void RequestDrop()
     {
-        if (Keyboard.current == null)
+        if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
+        {
+            KitchenNetwork.Instance.RequestDrop();
+        }
+        else
+        {
+            DropEverything();
+        }
+    }
+
+    public void RequestSauceSwitch()
+    {
+        Station station = FindNearbyStation();
+        if (station == null || station.stationType != StationType.Sauce)
         {
             return;
         }
 
-        // 타이틀, 일시정지, 결산 중에는 조작을 받지 않는다.
-        if (GameFlow.Instance != null && !GameFlow.Instance.IsPlaying)
+        if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
+        {
+            KitchenNetwork.Instance.RequestSauceCycle(station.Index);
+        }
+        else if (RestaurantGame.Instance != null)
+        {
+            RestaurantGame.Instance.CycleSauce(station);
+        }
+    }
+
+    /// <summary>업그레이드 데스크 앞에 있을 때만 구매가 된다.</summary>
+    public void RequestUpgrade(int slot)
+    {
+        Station station = FindNearbyStation();
+        if (station == null || station.stationType != StationType.Upgrade || RestaurantGame.Instance == null)
         {
             return;
         }
 
-        if (Keyboard.current.eKey.wasPressedThisFrame)
+        if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
         {
-            Interact();
+            KitchenNetwork.Instance.RequestUpgrade(slot);
         }
-
-        if (Keyboard.current.fKey.wasPressedThisFrame)
+        else
         {
-            if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
-            {
-                KitchenNetwork.Instance.RequestDrop();
-            }
-            else
-            {
-                DropEverything();
-            }
+            RestaurantGame.Instance.BuyUpgrade(slot);
         }
-
-        if (Keyboard.current.qKey.wasPressedThisFrame)
-        {
-            SwitchSauce();
-        }
-
-        CheckUpgradeShopKeys();
     }
 
     public void SetHeldFood(FoodItem food)
@@ -185,55 +194,7 @@ public sealed class PlayerInteraction : MonoBehaviour
         }
     }
 
-    private void SwitchSauce()
-    {
-        Station station = FindNearbyStation();
-        if (station == null || station.stationType != StationType.Sauce)
-        {
-            return;
-        }
-
-        if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
-        {
-            KitchenNetwork.Instance.RequestSauceCycle(station.Index);
-        }
-        else if (RestaurantGame.Instance != null)
-        {
-            RestaurantGame.Instance.CycleSauce(station);
-        }
-    }
-
-    /// <summary>업그레이드 스테이션 앞에서만 숫자 키가 구매로 이어진다.</summary>
-    private void CheckUpgradeShopKeys()
-    {
-        Station station = null;
-        for (int slot = 0; slot < ShopKeys.Length; slot++)
-        {
-            if (!Keyboard.current[ShopKeys[slot]].wasPressedThisFrame)
-            {
-                continue;
-            }
-
-            station ??= FindNearbyStation();
-            if (station == null || station.stationType != StationType.Upgrade || RestaurantGame.Instance == null)
-            {
-                return;
-            }
-
-            if (KitchenNetwork.Online && !KitchenNetwork.Instance.IsServer)
-            {
-                KitchenNetwork.Instance.RequestUpgrade(slot);
-            }
-            else
-            {
-                RestaurantGame.Instance.BuyUpgrade(slot);
-            }
-
-            return;
-        }
-    }
-
-    private void Interact()
+    public void Interact()
     {
         if (RestaurantGame.Instance == null)
         {

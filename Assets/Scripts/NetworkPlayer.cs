@@ -24,17 +24,17 @@ public sealed class NetworkPlayer : NetworkBehaviour
         name = IsOwner ? "Network Player (me)" : $"Network Player {OwnerClientId}";
         Debug.Log($"[Net] 플레이어 아바타 스폰 id={OwnerClientId} owner={IsOwner}");
 
-        // 내 캐릭터만 키보드를 읽고 상호작용한다.
-        PlayerController controller = GetComponent<PlayerController>();
-        if (controller != null)
+        // 내 캐릭터만 입력을 읽는다. 게임패드가 꽂혀 있으면 그것을 먼저 쓴다.
+        LocalPlayerInput input = GetComponent<LocalPlayerInput>();
+        if (input != null)
         {
-            controller.enabled = IsOwner;
-        }
-
-        PlayerInteraction interaction = GetComponent<PlayerInteraction>();
-        if (interaction != null)
-        {
-            interaction.enabled = IsOwner;
+            input.enabled = IsOwner;
+            if (IsOwner)
+            {
+                input.Configure(UnityEngine.InputSystem.Gamepad.current != null
+                    ? InputScheme.Gamepad
+                    : InputScheme.KeyboardLeft);
+            }
         }
 
         // 남의 캐릭터는 NetworkTransform 이 위치를 밀어주므로 직접 움직이면 안 된다.

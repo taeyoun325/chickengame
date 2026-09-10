@@ -7,11 +7,12 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     {
         // 씬을 다시 불러올 때 이전 등록이 남아 있으면 안 된다.
         WorldRegistry.Clear();
+
+        // 창이 포커스를 잃어도 계속 돌아야 한다. 특히 호스트가 멈추면 모두가 멈춘다.
+        Application.runInBackground = true;
         BuildLighting();
         BuildShop();
-        GameObject localPlayers = new GameObject("Local Players");
-        BuildPlayer().transform.SetParent(localPlayers.transform, true);
-        BuildLocalCoopPlayer().transform.SetParent(localPlayers.transform, true);
+        GameObject localPlayers = BuildLocalPlayers();
         BuildCamera();
         GameObject gameObject = new GameObject("Restaurant Game");
         RestaurantGame game = gameObject.AddComponent<RestaurantGame>();
@@ -88,20 +89,56 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateBlock("Customer Queue", new Vector3(0f, 0.2f, -4.5f), new Vector3(11f, 0.4f, 0.5f), new Color(0.9f, 0.25f, 0.25f));
     }
 
-    private GameObject BuildPlayer()
+    /// <summary>로컬 플레이어를 인원수만큼 만든다. 키보드 두 벌 + 게임패드 두 대까지.</summary>
+    private GameObject BuildLocalPlayers()
+    {
+        GameObject root = new GameObject("Local Players");
+        int padCount = Mathf.Min(UnityEngine.InputSystem.Gamepad.all.Count, 2);
+        int count = Mathf.Clamp(2 + padCount, 2, 4);
+
+        for (int index = 0; index < count; index++)
+        {
+            GameObject player = BuildPlayerBody(index, root.transform);
+            LocalPlayerInput input = player.AddComponent<LocalPlayerInput>();
+            if (index == 0)
+            {
+                input.Configure(InputScheme.KeyboardLeft);
+            }
+            else if (index == 1)
+            {
+                input.Configure(InputScheme.KeyboardRight);
+            }
+            else
+            {
+                input.Configure(InputScheme.Gamepad, index - 2);
+            }
+        }
+
+        return root;
+    }
+
+    private static readonly Color[] LocalPlayerColors =
+    {
+        new Color(0.95f, 0.8f, 0.2f),
+        new Color(0.25f, 0.65f, 1f),
+        new Color(0.4f, 0.85f, 0.4f),
+        new Color(0.9f, 0.45f, 0.75f)
+    };
+
+    private GameObject BuildPlayerBody(int index, Transform parent)
     {
         GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        player.name = "Player";
-        player.transform.position = new Vector3(0f, 1.2f, -1f);
+        player.name = index == 0 ? "Player" : $"Local Player {index + 1}";
+        player.transform.SetParent(parent, true);
+        player.transform.position = new Vector3(-2.4f + index * 1.6f, 1.2f, -1f);
         player.transform.localScale = new Vector3(0.8f, 1.2f, 0.8f);
         Destroy(player.GetComponent<Collider>());
         CharacterController controller = player.AddComponent<CharacterController>();
         controller.height = 2f;
         controller.radius = 0.4f;
         player.AddComponent<PlayerMotor>();
-        player.AddComponent<PlayerController>();
         player.AddComponent<PlayerInteraction>();
-        player.GetComponent<Renderer>().material.color = new Color(0.95f, 0.8f, 0.2f);
+        player.GetComponent<Renderer>().material.color = LocalPlayerColors[index % LocalPlayerColors.Length];
         return player;
     }
 
@@ -115,23 +152,6 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         camera.fieldOfView = 55f;
         cameraObject.AddComponent<AudioListener>();
         cameraObject.AddComponent<FollowPlayerCamera>();
-    }
-
-    private GameObject BuildLocalCoopPlayer()
-    {
-        GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        player.name = "Local Player 2";
-        player.transform.position = new Vector3(1.8f, 1.2f, -1f);
-        player.transform.localScale = new Vector3(0.8f, 1.2f, 0.8f);
-        Destroy(player.GetComponent<Collider>());
-        CharacterController controller = player.AddComponent<CharacterController>();
-        controller.height = 2f;
-        controller.radius = 0.4f;
-        player.AddComponent<PlayerMotor>();
-        player.AddComponent<LocalCoopPlayerController>();
-        player.AddComponent<PlayerInteraction>();
-        player.GetComponent<Renderer>().material.color = new Color(0.25f, 0.65f, 1f);
-        return player;
     }
 
     private void BuildHud(RestaurantGame game, DeliverySystem delivery, UpgradeSystem upgradeSystem, RandomEventSystem eventSystem, GameFlow flow)
@@ -148,7 +168,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         Text revenue = CreateLabel(canvasObject.transform, "REVENUE  ₩0 / ₩10,000,000", new Vector2(24f, -24f), 26);
         Text day = CreateLabel(canvasObject.transform, "DAY 1   600s", new Vector2(-24f, -24f), 26);
         Text orders = CreateLabel(canvasObject.transform, "주문을 기다리는 중...", new Vector2(24f, -70f), 20);
-        Text instructions = CreateLabel(canvasObject.transform, "P1 WASD + E   P2 IJKL + E   Q 소스   F 내려놓기   1~5 업그레이드\n냉장고 → 튀김기 → (양념대) → 포장대 → 계산대 / 배달대", new Vector2(24f, 24f), 18);
+        Text instructions = CreateLabel(canvasObject.transform, "P1 WASD+E   P2 IJKL+O   패드 스틱+A   F/P 내려놓기   Q/U 소스\n냉장고 → 튀김기 → (양념대) → 포장대 → 계산대 / 배달대", new Vector2(24f, 24f), 18);
         Text message = CreateLabel(canvasObject.transform, string.Empty, new Vector2(0f, 90f), 24);
         Text stats = CreateLabel(canvasObject.transform, "주문 0  성공 0  실패 0  탄 치킨 0", new Vector2(-24f, -100f), 16);
         revenue.rectTransform.anchorMin = new Vector2(0f, 1f);

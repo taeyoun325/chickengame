@@ -27,7 +27,7 @@ public static class ChickenGameNetworkPrefab
         controller.radius = 0.4f;
 
         player.AddComponent<PlayerMotor>();
-        player.AddComponent<PlayerController>();
+        player.AddComponent<LocalPlayerInput>();
         player.AddComponent<PlayerInteraction>();
         player.AddComponent<NetworkObject>();
 
