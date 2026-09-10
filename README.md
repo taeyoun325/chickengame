@@ -78,7 +78,7 @@ ChickenGame.exe -mode host -selftest -verbose -logFile selftest-host.log
 봇으로 밸런스를 측정한 결과는 `BALANCE.md` 에 정리했습니다.
 
 ```
-ChickenGame.exe -mode local -balancetest 5 -daylength 120 -logFile balance.log
+ChickenGame.exe -mode local -balancetest 5 -bots 2 -daylength 240 -logFile balance.log
 ```
 
 ## 멀티플레이
@@ -110,4 +110,7 @@ ChickenGame.exe -mode local
 `DAY 17` 게임 흐름과 승패 → `DAY 18` 난이도 밸런싱 → `DAY 19` 멀티플레이 복귀 →
 `DAY 20` 서버 권한 주방 + 최적화 → `DAY 21` 최종 빌드 →
 `DAY 22` 게임패드·4인 → `DAY 23` 사고 연출 동기화 → `DAY 24` 셀프테스트 →
-`DAY 25` 검증 확대 → `DAY 26` 스테이션 이름표.
+`DAY 25` 검증 확대 → `DAY 26` 스테이션 이름표 → `DAY 27` 코드 분리 →
+`DAY 28` 세트 주문 → `DAY 29` 손님 주문 표시 → `DAY 30` 음악·정전 →
+`DAY 31` 전원 담는 카메라 → `DAY 32` 할당 정리 → `DAY 33` 밸런스 측정 →
+`DAY 34` 측정으로 찾은 결함 수정.
