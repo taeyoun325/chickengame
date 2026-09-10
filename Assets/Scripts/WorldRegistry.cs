@@ -67,11 +67,15 @@ public static class WorldRegistry
         players.Remove(player);
     }
 
-    /// <summary>주어진 위치에서 반경 안에 있는 가장 가까운 스테이션.</summary>
-    public static Station NearestStation(Vector3 position, float maxDistance)
+    /// <summary>반경 안에서 지금 쓰려는 스테이션을 고른다. 거리만 보면 두 스테이션
+    /// 사이에 섰을 때 등 뒤의 것이 잡히므로, 바라보는 방향에 가산점을 준다.</summary>
+    public static Station NearestStation(Vector3 position, float maxDistance, Vector3 facing = default)
     {
-        Station closest = null;
-        float closestDistance = maxDistance;
+        bool useFacing = facing.sqrMagnitude > 0.01f;
+        Vector3 forward = useFacing ? facing.normalized : Vector3.zero;
+
+        Station best = null;
+        float bestScore = float.MaxValue;
         for (int index = 0; index < stations.Count; index++)
         {
             Station station = stations[index];
@@ -80,15 +84,29 @@ public static class WorldRegistry
                 continue;
             }
 
-            float distance = Vector3.Distance(position, station.transform.position);
-            if (distance < closestDistance)
+            Vector3 delta = station.transform.position - position;
+            delta.y = 0f;
+            float distance = delta.magnitude;
+            if (distance > maxDistance)
             {
-                closest = station;
-                closestDistance = distance;
+                continue;
+            }
+
+            float score = distance;
+            if (useFacing && distance > 0.01f)
+            {
+                // 정면이면 최대 1.2m 만큼 가깝게 친다.
+                score -= Vector3.Dot(forward, delta / distance) * 1.2f;
+            }
+
+            if (score < bestScore)
+            {
+                best = station;
+                bestScore = score;
             }
         }
 
-        return closest;
+        return best;
     }
 
     public static FoodItem NearestLooseFood(Vector3 position, float maxDistance)

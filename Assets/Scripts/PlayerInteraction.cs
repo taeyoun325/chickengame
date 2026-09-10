@@ -243,7 +243,7 @@ public sealed class PlayerInteraction : MonoBehaviour
 
     public Station FindNearbyStation()
     {
-        return WorldRegistry.NearestStation(transform.position, InteractRange);
+        return WorldRegistry.NearestStation(transform.position, InteractRange, transform.forward);
     }
 
     private FoodItem FindNearbyFood()

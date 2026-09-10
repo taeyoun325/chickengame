@@ -49,7 +49,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     private void RegisterReserveFryers(RestaurantGame game)
     {
         // 예비 튀김기도 켜지면 바로 김이 오르도록 파티클을 미리 붙여둔다.
-        game.RegisterReserveFryer(AddSteam(CreateStation("Fryer 3", StationType.Fryer, new Vector3(-1f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f))).gameObject);
+        game.RegisterReserveFryer(AddSteam(CreateStation("Fryer 3", StationType.Fryer, new Vector3(5f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f))).gameObject);
         game.RegisterReserveFryer(AddSteam(CreateStation("Fryer 4", StationType.Fryer, new Vector3(-4f, 0.8f, 1f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f))).gameObject);
     }
 
@@ -93,7 +93,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         AddSteam(CreateStation("Fryer", StationType.Fryer, new Vector3(-7f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)));
         AddSteam(CreateStation("Fryer 2", StationType.Fryer, new Vector3(-4f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.9f, 0.38f, 0.08f)));
         CreateStation("Sauce Table", StationType.Sauce, new Vector3(2f, 0.8f, 4.2f), new Vector3(2.4f, 1.6f, 1.6f), new Color(0.75f, 0.2f, 0.3f));
-        CreateStation("Fridge", StationType.Fridge, new Vector3(5f, 1.5f, 4.2f), new Vector3(2f, 3f, 2f), new Color(0.35f, 0.7f, 0.8f));
+        CreateStation("Fridge", StationType.Fridge, new Vector3(-1f, 1.5f, 4.2f), new Vector3(2f, 3f, 2f), new Color(0.35f, 0.7f, 0.8f));
         CreateStation("Upgrade Desk", StationType.Upgrade, new Vector3(8f, 0.8f, 4.2f), new Vector3(1.5f, 1.6f, 2.5f), new Color(0.55f, 0.35f, 0.8f));
         CreateStation("Packing Counter", StationType.Packing, new Vector3(0f, 0.8f, 0.8f), new Vector3(3f, 1.6f, 1.5f), new Color(0.95f, 0.75f, 0.25f));
         CreateStation("Trash Bin", StationType.Trash, new Vector3(-7.5f, 0.6f, 0.5f), new Vector3(1.4f, 1.2f, 1.4f), new Color(0.25f, 0.25f, 0.28f));

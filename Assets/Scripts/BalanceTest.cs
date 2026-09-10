@@ -61,7 +61,16 @@ public sealed class BalanceTest : MonoBehaviour
 
         for (int index = 0; index < botCount; index++)
         {
-            StartCoroutine(RunBot(WorldRegistry.Players[index], index));
+            PlayerInteraction bot = WorldRegistry.Players[index];
+
+            // 키보드 입력이 매 프레임 모터를 0 으로 덮어쓰므로 봇이 잡은 플레이어는 꺼둔다.
+            LocalPlayerInput input = bot.GetComponent<LocalPlayerInput>();
+            if (input != null)
+            {
+                input.enabled = false;
+            }
+
+            StartCoroutine(RunBot(bot, index));
         }
 
         while (game.Day <= daysToRun)
@@ -144,47 +153,127 @@ public sealed class BalanceTest : MonoBehaviour
             yield break;
         }
 
-        game.InteractWithStation(bot, FindStation(StationType.Fridge));
+        yield return UseStation(bot, FindStation(StationType.Fridge), botIndex % 2 == 0 ? 1f : -1f);
         if (bot.HeldFood == null)
         {
             yield break;
         }
 
-        game.InteractWithStation(bot, fryer);
+        yield return UseStation(bot, fryer, botIndex % 2 == 0 ? 1f : -1f);
         if (bot.HeldFood != null)
         {
-            // 다른 봇이 한발 빨랐다면 들고 있던 생닭을 버린다.
-            game.InteractWithStation(bot, FindStation(StationType.Trash));
+            // 걸어가는 사이 다른 봇이 먼저 썼다면 들고 있던 생닭을 버린다.
+            yield return UseStation(bot, FindStation(StationType.Trash), botIndex % 2 == 0 ? 1f : -1f);
             yield break;
         }
 
         // 업그레이드로 튀김 시간이 줄어드니 고정값으로 기다리면 다 태운다.
         yield return new WaitForSeconds(game.FryTime + 0.3f);
-        game.InteractWithStation(bot, fryer);
+        yield return UseStation(bot, fryer, botIndex % 2 == 0 ? 1f : -1f);
 
         if (bot.HeldFood == null || bot.HeldFood.state != FoodState.Cooked)
         {
-            game.InteractWithStation(bot, FindStation(StationType.Trash));
+            yield return UseStation(bot, FindStation(StationType.Trash), botIndex % 2 == 0 ? 1f : -1f);
             yield break;
         }
 
         if (target.recipe.needsSauce)
         {
-            Station sauce = FindStation(StationType.Sauce);
-            if (sauce != null)
-            {
-                bot.SetSauceChoice(target.recipe.kind);
-                game.InteractWithStation(bot, sauce);
-            }
+            bot.SetSauceChoice(target.recipe.kind);
+            yield return UseStation(bot, FindStation(StationType.Sauce), botIndex % 2 == 0 ? 1f : -1f);
         }
 
-        game.InteractWithStation(bot, FindStation(StationType.Packing));
-        game.InteractWithStation(bot, FindStation(StationType.Checkout));
+        yield return UseStation(bot, FindStation(StationType.Packing), botIndex % 2 == 0 ? 1f : -1f);
+        yield return UseStation(bot, FindStation(StationType.Checkout), botIndex % 2 == 0 ? 1f : -1f);
 
         if (bot.HeldFood != null)
         {
-            game.InteractWithStation(bot, FindStation(StationType.Trash));
+            yield return UseStation(bot, FindStation(StationType.Trash), botIndex % 2 == 0 ? 1f : -1f);
         }
+    }
+
+    /// <summary>스테이션까지 걸어간 다음 사람과 같은 경로로 상호작용한다.
+    /// 순간이동으로 재면 사람 플레이를 전혀 예측하지 못한다.</summary>
+    private IEnumerator UseStation(PlayerInteraction bot, Station station, float botSide = 1f)
+    {
+        if (station == null)
+        {
+            yield break;
+        }
+
+        PlayerMotor motor = bot.GetComponent<PlayerMotor>();
+        float timeout = 20f;
+        Vector3 lastPosition = bot.transform.position;
+        float stuckTimer = 0f;
+        float avoidTimer = 0f;
+        float sideSign = botSide;
+
+        // 스테이션 정면(가게 안쪽)으로 다가간다. 옆에 서면 이웃 스테이션이 잡힌다.
+        Vector3 approach = ApproachPoint(station);
+
+        while (timeout > 0f)
+        {
+            Vector3 delta = approach - bot.transform.position;
+            delta.y = 0f;
+            if (delta.magnitude <= 0.6f)
+            {
+                break;
+            }
+
+            Vector2 direction = new Vector2(delta.x, delta.z).normalized;
+
+            // 카운터에 부딪히면 한동안 옆으로 붙어 돌아간다. 한 프레임만 비껴가면
+            // 다시 벽으로 향해 제자리걸음만 반복한다.
+            if (avoidTimer > 0f)
+            {
+                avoidTimer -= Time.deltaTime;
+                direction = new Vector2(-direction.y, direction.x) * sideSign;
+            }
+            else if (stuckTimer > 0.3f)
+            {
+                stuckTimer = 0f;
+                avoidTimer = 1.1f;
+                sideSign = -sideSign;
+            }
+
+            if (motor != null)
+            {
+                motor.SetInput(direction);
+            }
+
+            timeout -= Time.deltaTime;
+            yield return null;
+
+            if ((bot.transform.position - lastPosition).sqrMagnitude < 0.0004f)
+            {
+                stuckTimer += Time.deltaTime;
+            }
+            else
+            {
+                stuckTimer = 0f;
+                lastPosition = bot.transform.position;
+            }
+        }
+
+        if (motor != null)
+        {
+            motor.SetInput(Vector2.zero);
+        }
+
+        // 마지막으로 스테이션을 바라보게 해서 정면 가산점을 받는다.
+        Vector3 look = station.transform.position - bot.transform.position;
+        look.y = 0f;
+        if (look.sqrMagnitude > 0.01f)
+        {
+            bot.transform.forward = look.normalized;
+        }
+
+        Station reached = bot.FindNearbyStation();
+        float finalDistance = Vector3.Distance(bot.transform.position, station.transform.position);
+        bot.Interact();
+        GameLog.Verbose($"[Bot] {station.stationType} 목표, {finalDistance:0.0}m, 잡힌 것 " +
+                        $"{(reached != null ? reached.stationType.ToString() : "없음")}, 손 " +
+                        $"{(bot.HeldFood != null ? bot.HeldFood.state.ToString() : "빔")}");
     }
 
     /// <summary>돈이 모이면 업그레이드를 산다.</summary>
@@ -237,6 +326,16 @@ public sealed class BalanceTest : MonoBehaviour
         }
 
         return null;
+    }
+
+    /// <summary>스테이션 앞 1.7m 지점. 가게 안쪽 방향으로 잡는다.</summary>
+    private static Vector3 ApproachPoint(Station station)
+    {
+        Vector3 position = station.transform.position;
+        Vector3 inward = new Vector3(0f, 0f, -Mathf.Sign(position.z == 0f ? 1f : position.z));
+        Vector3 point = position + inward * 1.7f;
+        point.y = position.y;
+        return point;
     }
 
     private static Station FindStation(StationType type)

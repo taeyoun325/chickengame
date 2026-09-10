@@ -34,7 +34,7 @@ public sealed partial class RestaurantGame : MonoBehaviour
 
     public const int TargetRevenue = 10_000_000;
     private const float DefaultDayLength = 600f;
-    private const float BaseOrderInterval = 12f;
+    private const float BaseOrderInterval = 14f;
     private const float OrderPatience = 45f;
     private const float BaseFryTime = 5f;
 

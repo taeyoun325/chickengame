@@ -75,7 +75,9 @@ ChickenGame.exe -mode host -selftest -verbose -logFile selftest-host.log
 `-autoday` 는 결산 화면을 자동으로 넘겨 무인 장시간 테스트를 돌릴 때 쓰고,
 `-verbose` 는 스폰과 네트워크 진단 로그를 켭니다.
 
-봇으로 밸런스를 측정한 결과는 `BALANCE.md` 에 정리했습니다.
+봇이 주방 파이프라인을 끝까지 돌려보는 측정도 있습니다. 다만 이 봇은 사람처럼 플레이하지
+못하므로 (튀김이 끝날 때까지 서서 기다리고, 주문을 겹쳐 돌리지 못합니다) 난이도 기준이 아니라
+**서투른 플레이의 하한선**으로만 읽습니다. 자세한 내용과 수치는 `BALANCE.md` 에 있습니다.
 
 ```
 ChickenGame.exe -mode local -balancetest 5 -bots 2 -daylength 240 -logFile balance.log
