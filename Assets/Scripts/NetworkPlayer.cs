@@ -5,36 +5,26 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerMotor))]
 public sealed class NetworkPlayer : NetworkBehaviour
 {
-    private static readonly Color[] PlayerColors =
-    {
-        new Color(0.95f, 0.8f, 0.2f),
-        new Color(0.25f, 0.65f, 1f),
-        new Color(0.4f, 0.85f, 0.4f),
-        new Color(0.9f, 0.45f, 0.75f)
-    };
-
     public override void OnNetworkSpawn()
     {
+        Color[] colors = ChickenGameBootstrap.PlayerColors;
+        Color color = colors[(int)(OwnerClientId % (ulong)colors.Length)];
         Renderer bodyRenderer = GetComponent<Renderer>();
         if (bodyRenderer != null)
         {
-            bodyRenderer.material.color = PlayerColors[(int)(OwnerClientId % (ulong)PlayerColors.Length)];
+            bodyRenderer.material.color = color;
         }
+
+        CharacterVisual.Attach(gameObject, color, "chef hat");
 
         name = IsOwner ? "Network Player (me)" : $"Network Player {OwnerClientId}";
         GameLog.Verbose($"[Net] 플레이어 아바타 스폰 id={OwnerClientId} owner={IsOwner}");
 
-        // 내 캐릭터만 입력을 읽는다. 게임패드가 꽂혀 있으면 그것을 먼저 쓴다.
+        // 내 캐릭터만 입력을 읽는다. 키보드와 게임패드 중 손에 잡히는 쪽을 쓴다.
         LocalPlayerInput input = GetComponent<LocalPlayerInput>();
         if (input != null)
         {
             input.enabled = IsOwner;
-            if (IsOwner)
-            {
-                input.Configure(UnityEngine.InputSystem.Gamepad.current != null
-                    ? InputScheme.Gamepad
-                    : InputScheme.KeyboardLeft);
-            }
         }
 
         // 남의 캐릭터는 NetworkTransform 이 위치를 밀어주므로 직접 움직이면 안 된다.
@@ -53,7 +43,7 @@ public sealed class NetworkPlayer : NetworkBehaviour
         if (IsOwner)
         {
             transform.position = new Vector3(-2f + OwnerClientId * 1.6f, 1.2f, -1f);
-            FollowPlayerCamera.SetTarget(transform);
+            FirstPersonView.SetSubject(transform);
         }
     }
 }

@@ -18,8 +18,7 @@ public static class NetworkSpawner
             return spawned.GetComponent<FoodItem>();
         }
 
-        GameObject chickenObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        chickenObject.name = "Raw Chicken";
+        GameObject chickenObject = GameMaterials.CreatePrimitive(PrimitiveType.Sphere, "Raw Chicken", Color.white);
         chickenObject.transform.localScale = Vector3.one * 0.65f;
         FoodItem chicken = chickenObject.AddComponent<FoodItem>();
         return chicken;
@@ -36,8 +35,7 @@ public static class NetworkSpawner
             return spawned.GetComponent<Customer>();
         }
 
-        GameObject customerObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        customerObject.name = customerName;
+        GameObject customerObject = GameMaterials.CreatePrimitive(PrimitiveType.Capsule, customerName, Color.white);
         customerObject.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
         Object.Destroy(customerObject.GetComponent<Collider>());
         return customerObject.AddComponent<Customer>();
@@ -64,12 +62,10 @@ public static class NetworkSpawner
             return spawned;
         }
 
-        GameObject local = GameObject.CreatePrimitive(fallbackShape);
-        local.name = resourceName;
+        GameObject local = GameMaterials.CreatePrimitive(fallbackShape, resourceName, color);
         local.transform.position = position;
         local.transform.localScale = scale;
         Object.Destroy(local.GetComponent<Collider>());
-        local.GetComponent<Renderer>().material.color = color;
         return local;
     }
 

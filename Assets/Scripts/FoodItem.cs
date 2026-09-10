@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum FoodState
@@ -22,6 +23,8 @@ public sealed class FoodItem : MonoBehaviour
 
     private MenuRecipe recipe = MenuDatabase.Fried;
     private Renderer itemRenderer;
+    private Material[] modelMaterials;
+    private GameObject[] packagingProps;
 
     /// <summary>생닭은 아직 메뉴가 정해지지 않았고, 양념대에서 최종 메뉴가 결정된다.</summary>
     public MenuRecipe Recipe => recipe;
@@ -31,8 +34,45 @@ public sealed class FoodItem : MonoBehaviour
     private void Awake()
     {
         itemRenderer = GetComponent<Renderer>();
+        BuildModel();
         RefreshVisual();
         WorldRegistry.Register(this);
+    }
+
+    /// <summary>1인칭에서 손에 들고 다니는 물건이라 가장 자주 보인다.
+    /// 에셋 팩이 없으면 예전의 구 모양으로 남는다.</summary>
+    private void BuildModel()
+    {
+        GameObject model = PropVisual.Attach(gameObject, "Chicken");
+        if (model == null)
+        {
+            return;
+        }
+
+        List<Material> materials = new List<Material>();
+        foreach (Renderer modelRenderer in model.GetComponentsInChildren<Renderer>(true))
+        {
+            materials.AddRange(modelRenderer.materials);
+        }
+
+        modelMaterials = materials.ToArray();
+        packagingProps = FindPackaging(model.transform);
+    }
+
+    /// <summary>모델에 딸린 상자 프롭. 포장한 뒤에만 씌운다.</summary>
+    private static GameObject[] FindPackaging(Transform root)
+    {
+        List<GameObject> boxes = new List<GameObject>();
+        foreach (Transform node in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (node.name.StartsWith("Box", System.StringComparison.OrdinalIgnoreCase))
+            {
+                node.gameObject.SetActive(false);
+                boxes.Add(node.gameObject);
+            }
+        }
+
+        return boxes.ToArray();
     }
 
     private void OnDestroy()
@@ -94,18 +134,38 @@ public sealed class FoodItem : MonoBehaviour
 
     private void RefreshVisual()
     {
-        if (itemRenderer == null)
+        Paint(dirty ? new Color(0.35f, 0.3f, 0.22f) : StateColor());
+
+        if (packagingProps != null)
         {
+            foreach (GameObject box in packagingProps)
+            {
+                box.SetActive(state == FoodState.Packaged);
+            }
+        }
+    }
+
+    private void Paint(Color color)
+    {
+        if (modelMaterials != null)
+        {
+            foreach (Material material in modelMaterials)
+            {
+                material.color = color;
+            }
+
             return;
         }
 
-        if (dirty)
+        if (itemRenderer != null)
         {
-            itemRenderer.material.color = new Color(0.35f, 0.3f, 0.22f);
-            return;
+            itemRenderer.material.color = color;
         }
+    }
 
-        itemRenderer.material.color = state switch
+    private Color StateColor()
+    {
+        return state switch
         {
             FoodState.Raw => new Color(0.9f, 0.65f, 0.45f),
             FoodState.Frying => new Color(1f, 0.55f, 0.05f),

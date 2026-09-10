@@ -64,6 +64,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
     {
         GameObject scooter = CreateBlock("Delivery Scooter", new Vector3(3.5f, 0.4f, -7.5f), new Vector3(0.9f, 0.8f, 1.8f), new Color(0.15f, 0.45f, 0.85f));
         Destroy(scooter.GetComponent<Collider>());
+        PropVisual.Attach(scooter, "Scooter");
         return scooter;
     }
 
@@ -103,35 +104,17 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         CreateBlock("Customer Queue", new Vector3(0f, 0.2f, -4.5f), new Vector3(11f, 0.4f, 0.5f), new Color(0.9f, 0.25f, 0.25f));
     }
 
-    /// <summary>로컬 플레이어를 인원수만큼 만든다. 키보드 두 벌 + 게임패드 두 대까지.</summary>
+    /// <summary>화면이 하나이고 시점이 1인칭이므로 로컬 캐릭터는 나 하나다.
+    /// 친구와 같이 하려면 타이틀에서 호스트로 열거나 접속한다.</summary>
     private GameObject BuildLocalPlayers()
     {
         GameObject root = new GameObject("Local Players");
-        int padCount = Mathf.Min(UnityEngine.InputSystem.Gamepad.all.Count, 2);
-        int count = Mathf.Clamp(2 + padCount, 2, 4);
-
-        for (int index = 0; index < count; index++)
-        {
-            GameObject player = BuildPlayerBody(index, root.transform);
-            LocalPlayerInput input = player.AddComponent<LocalPlayerInput>();
-            if (index == 0)
-            {
-                input.Configure(InputScheme.KeyboardLeft);
-            }
-            else if (index == 1)
-            {
-                input.Configure(InputScheme.KeyboardRight);
-            }
-            else
-            {
-                input.Configure(InputScheme.Gamepad, index - 2);
-            }
-        }
-
+        GameObject player = BuildPlayerBody(0, root.transform);
+        player.AddComponent<LocalPlayerInput>();
         return root;
     }
 
-    private static readonly Color[] LocalPlayerColors =
+    public static readonly Color[] PlayerColors =
     {
         new Color(0.95f, 0.8f, 0.2f),
         new Color(0.25f, 0.65f, 1f),
@@ -141,8 +124,11 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
 
     private GameObject BuildPlayerBody(int index, Transform parent)
     {
-        GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        player.name = index == 0 ? "Player" : $"Local Player {index + 1}";
+        Color color = PlayerColors[index % PlayerColors.Length];
+        GameObject player = GameMaterials.CreatePrimitive(
+            PrimitiveType.Capsule,
+            index == 0 ? "Player" : $"Local Player {index + 1}",
+            color);
         player.transform.SetParent(parent, true);
         player.transform.position = new Vector3(-2.4f + index * 1.6f, 1.2f, -1f);
         player.transform.localScale = new Vector3(0.8f, 1.2f, 0.8f);
@@ -152,7 +138,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         controller.radius = 0.4f;
         player.AddComponent<PlayerMotor>();
         player.AddComponent<PlayerInteraction>();
-        player.GetComponent<Renderer>().material.color = LocalPlayerColors[index % LocalPlayerColors.Length];
+        CharacterVisual.Attach(player, color, "chef hat");
         return player;
     }
 
@@ -161,11 +147,11 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         GameObject cameraObject = new GameObject("Main Camera");
         Camera camera = cameraObject.AddComponent<Camera>();
         camera.tag = "MainCamera";
-        camera.transform.position = new Vector3(0f, 14f, -13f);
-        camera.transform.rotation = Quaternion.Euler(48f, 0f, 0f);
-        camera.fieldOfView = 55f;
+        // 좁은 주방을 1인칭으로 도는 게임이라 시야각이 넓어야 답답하지 않고,
+        // 근거리 평면이 짧아야 카운터에 붙어도 뚫려 보이지 않는다.
+        camera.fieldOfView = 70f;
+        camera.nearClipPlane = 0.05f;
         cameraObject.AddComponent<AudioListener>();
-        cameraObject.AddComponent<FollowPlayerCamera>();
         cameraObject.AddComponent<FirstPersonView>();
     }
 
@@ -183,7 +169,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         Text revenue = CreateLabel(canvasObject.transform, "REVENUE  ₩0 / ₩10,000,000", new Vector2(24f, -24f), 26);
         Text day = CreateLabel(canvasObject.transform, "DAY 1   600s", new Vector2(-24f, -24f), 26);
         Text orders = CreateLabel(canvasObject.transform, "주문을 기다리는 중...", new Vector2(24f, -70f), 20);
-        Text instructions = CreateLabel(canvasObject.transform, "P1 WASD+E   P2 IJKL+O   패드 스틱+A   F/P 내려놓기   Q/U 소스   V 1인칭\n냉장고 → 튀김기 → (양념대) → 포장대 → 계산대 / 배달대", new Vector2(24f, 24f), 18);
+        Text instructions = CreateLabel(canvasObject.transform, "WASD 이동   마우스 시점   SPACE 점프   E 상호작용   F 내려놓기   Q 소스   1~5 업그레이드\n냉장고 → 튀김기 → (양념대) → 포장대 → 계산대 / 배달대", new Vector2(24f, 24f), 18);
         Text message = CreateLabel(canvasObject.transform, string.Empty, new Vector2(0f, 90f), 24);
         Text stats = CreateLabel(canvasObject.transform, "주문 0  성공 0  실패 0  탄 치킨 0", new Vector2(-24f, -100f), 16);
         revenue.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -243,7 +229,40 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
 
         game.ConnectEvents(eventSystem, eventBanner);
         game.ConnectNetworkLabel(networkStatus);
+        BuildAimHud(canvasObject.transform);
         BuildPanels(canvasObject.transform, game, flow);
+    }
+
+    /// <summary>조준점과 그 아래 안내. 1인칭에서 다음 동작을 읽는 자리다.</summary>
+    private static void BuildAimHud(Transform parent)
+    {
+        GameObject crosshairObject = new GameObject("Crosshair");
+        crosshairObject.transform.SetParent(parent, false);
+        Image crosshair = crosshairObject.AddComponent<Image>();
+        crosshair.color = new Color(1f, 1f, 1f, 0.35f);
+        crosshair.raycastTarget = false;
+        RectTransform crosshairRect = crosshair.rectTransform;
+        crosshairRect.anchorMin = new Vector2(0.5f, 0.5f);
+        crosshairRect.anchorMax = new Vector2(0.5f, 0.5f);
+        crosshairRect.pivot = new Vector2(0.5f, 0.5f);
+        crosshairRect.sizeDelta = new Vector2(7f, 7f);
+        crosshairRect.anchoredPosition = Vector2.zero;
+
+        Text prompt = CreateLabel(parent, string.Empty, new Vector2(0f, -70f), 22);
+        prompt.alignment = TextAnchor.MiddleCenter;
+        prompt.color = new Color(1f, 0.9f, 0.5f);
+        prompt.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        prompt.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        prompt.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+
+        Text hands = CreateLabel(parent, string.Empty, new Vector2(0f, 130f), 18);
+        hands.alignment = TextAnchor.LowerCenter;
+        hands.color = new Color(0.85f, 0.92f, 1f);
+        hands.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+        hands.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+        hands.rectTransform.pivot = new Vector2(0.5f, 0f);
+
+        parent.gameObject.AddComponent<AimHud>().Connect(crosshair, prompt, hands);
     }
 
     /// <summary>타이틀, 일시정지, 결산, 결과 화면을 만들고 GameFlow 에 넘긴다.</summary>
@@ -307,8 +326,41 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         GameObject stationObject = CreateBlock(name, position, scale, color);
         Station station = stationObject.AddComponent<Station>();
         station.stationType = type;
+
+        // 소품은 겉모습만 바꾼다. 충돌과 조준 판정은 블록이 그대로 맡는다.
+        AttachProp(stationObject, type);
         StationLabel.Attach(station, KoreanName(type), scale.y * 0.5f + 0.35f);
         return station;
+    }
+
+    /// <summary>스테이션마다 어울리는 가구를 얹는다. 덩치가 맞는 가구는 블록을 대신하고,
+    /// 금전등록기처럼 작은 것은 블록을 카운터로 남긴 채 그 위에 올린다.
+    ///
+    /// 튀김기와 쓰레기통, 소화기는 에셋에 맞는 모델이 없어 색이 분명한 블록으로 남긴다.
+    /// 주방에서 제일 급하게 찾는 것들이라 오히려 그 편이 눈에 잘 띈다.</summary>
+    private static void AttachProp(GameObject stationObject, StationType type)
+    {
+        switch (type)
+        {
+            case StationType.Fridge:
+                PropVisual.Attach(stationObject, "Freezer");
+                break;
+            case StationType.Sauce:
+                PropVisual.Attach(stationObject, "Cafe_Cabinet_1");
+                break;
+            case StationType.Packing:
+                PropVisual.Attach(stationObject, "Dinner_Table");
+                break;
+            case StationType.Checkout:
+                PropVisual.Attach(stationObject, "Cafe_Cafe_Cash_Register_1", PropVisual.Placement.OnTop);
+                break;
+            case StationType.Delivery:
+                PropVisual.Attach(stationObject, "Dinner_Stand", PropVisual.Placement.OnTop);
+                break;
+            case StationType.Upgrade:
+                PropVisual.Attach(stationObject, "Cafe_Shelf_1", PropVisual.Placement.OnTop);
+                break;
+        }
     }
 
     /// <summary>어느 블록이 무엇인지 한눈에 보이도록 붙이는 이름.</summary>
@@ -331,11 +383,9 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
 
     private static GameObject CreateBlock(string name, Vector3 position, Vector3 scale, Color color)
     {
-        GameObject block = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        block.name = name;
+        GameObject block = GameMaterials.CreatePrimitive(PrimitiveType.Cube, name, color);
         block.transform.position = position;
         block.transform.localScale = scale;
-        block.GetComponent<Renderer>().material.color = color;
         return block;
     }
 }

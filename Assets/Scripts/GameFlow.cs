@@ -313,7 +313,7 @@ public sealed class GameFlow : MonoBehaviour
             return;
         }
 
-        // 네트워크 모드에서는 각자 자기 캐릭터를 스폰하므로 로컬 2인용 캐릭터는 접는다.
+        // 네트워크 모드에서는 각자 자기 캐릭터를 스폰하므로 로컬 캐릭터는 접는다.
         if (localPlayerRoot != null)
         {
             localPlayerRoot.SetActive(false);
@@ -410,9 +410,9 @@ public sealed class GameFlow : MonoBehaviour
         string recordLine = BuildRecordLine();
         return "CHICKEN GAME\n\n" +
                "누적 매출 ₩10,000,000 을 목표로\n치킨집을 운영하세요\n\n" +
-               "SPACE  로컬 2인 새 게임\n" + continueLine + "\n" +
-               "H  호스트로 열기      J  호스트에 접속\n\n" +
-               "P1 WASD+E   P2 IJKL+O   게임패드 자동 인식\nESC 일시정지" + recordLine;
+               "SPACE  혼자 시작\n" + continueLine + "\n" +
+               "H  호스트로 열기      J  친구에게 접속  (최대 4인)\n\n" +
+               "WASD 이동   마우스 시점   SPACE 점프   E 상호작용\nF 내려놓기   Q 소스   ESC 일시정지" + recordLine;
     }
 
     /// <summary>이전 기록이 있으면 타이틀에 함께 보여준다.</summary>

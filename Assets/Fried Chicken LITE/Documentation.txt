@@ -1,0 +1,45 @@
+	
+--------------Fried Chicken Character LITE----------------------------
+
+This pack contains 3d Animated model of a Reallistic Fried Chicken.Best fit for fun, foodie and Creepy games.You can use this pack commercially.
+
+Note : This is a Lite version of the asset "Fried Chicken Character"
+whats new in the full version : 7 Animations (Idle, Run, Jump, Double Jump, Fly, Sprint, Death)
+
+Technical Details:-
+		- Character : Fried Chicken
+		- Animations : 1 (Flying animation)
+		- Props (Toggle-able) : Bread, Box, Wings
+		- Prefabs : 16
+		- Poly count (in Tris) : 6176 (Including Chicken with all Props)
+		- Used Material(s) : URP/Lit
+		- Texture maps : Albedo/Base Color, Metallic Smoothness, Normal
+		- Texture Size : 2048 x2048 (Png Fromat)
+
+Features:-
+	- Optimized lowpoly models (Best for PC and Mobiles)
+	- Props can be toggled On/Off	
+	- All meshes are UV Unwrapped
+	- You can add Custom PBR textures
+	- Smooth animations (Seamless loop)
+	- High quality 2K textures
+	- Textures can be Easy to edit/modify
+	- Demo scene, Colliders included
+	- Mobile/AR Ready asset
+		
+Folder details:-
+
+	Materials : Where the materials for the model located.	
+	Meshes : Contain FBX format of the 3d model.	
+	Textures : Contains Textures, that are in (.PNG) file format	
+	(Other folders - Prefabs, Scenes)
+
+How to use:-
+	Simply drag and drop the prefab from Prefab folder to your scene and use it.
+
+.................................................................................
+
+About Me : "SR Studios Kerala", Indie Game developer & 2D-3D Artist from Alappuzha, Kerala, India
+contact : srstudioskerala@gmail.com
+
+................Thanks for downloading this package................................

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 40862b9fbb0306c4f98bea8701ba33c5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 393544
+  packageName: Fried Chicken 3D Lite
+  packageVersion: 1.0
+  assetPath: Assets/Fried Chicken LITE/Scripts/anim_clip_offset.cs
+  uploadId: 953912

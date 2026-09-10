@@ -22,7 +22,8 @@ public sealed class SelfTest : MonoBehaviour
         Check(WorldRegistry.Stations.Count >= 9, $"스테이션 등록 {WorldRegistry.Stations.Count}개");
         Check(FindStation(StationType.Fryer) != null, "튀김기가 있다");
         Check(FindStation(StationType.Checkout) != null, "계산대가 있다");
-        Check(WorldRegistry.Players.Count >= 2, $"로컬 플레이어 {WorldRegistry.Players.Count}명");
+        Check(WorldRegistry.Players.Count >= 1, $"로컬 플레이어 {WorldRegistry.Players.Count}명");
+        Check(FirstPersonView.Subject != null, "1인칭 시점이 내 캐릭터를 잡았다");
 
         if (game == null)
         {

@@ -1,39 +1,90 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-/// <summary>1인칭 시점. 카메라가 플레이어 눈높이로 내려가고 마우스로 둘러본다.
-/// 로컬 협동에서는 화면이 하나라 1번 플레이어 기준이고, 네트워크에서는 내 캐릭터 기준이다.</summary>
+/// <summary>이 게임의 유일한 시점. 카메라는 내 캐릭터의 눈이고, 마우스로 둘러본다.
+/// 조준선이 가리키는 것이 상호작용 대상이므로 시선과 몸의 방향이 늘 일치해야 한다.</summary>
 public sealed class FirstPersonView : MonoBehaviour
 {
     private const float EyeHeight = 0.72f;
-    private const float Sensitivity = 0.12f;
-    private const float MinPitch = -70f;
-    private const float MaxPitch = 75f;
+    private const float MinPitch = -75f;
+    private const float MaxPitch = 80f;
+    private const float BobSpeed = 9.5f;
+    private const float BobHeight = 0.055f;
+    private const float BobSway = 0.03f;
+
+    private const string SensitivityKey = "chickengame.sensitivity";
 
     public static FirstPersonView Instance { get; private set; }
 
     private Transform subject;
+    private PlayerMotor subjectMotor;
     private float yaw;
     private float pitch;
-
-    /// <summary>지금 1인칭인지. 카메라와 이동, 회전이 모두 이 값을 본다.</summary>
-    public static bool Active { get; private set; }
+    private float sensitivity = 0.12f;
+    private float bobPhase;
+    private float bobAmount;
+    private float shakeTimer;
+    private float shakeDuration;
+    private float shakeStrength;
 
     private void Awake()
     {
         Instance = this;
+        sensitivity = Mathf.Clamp(PlayerPrefs.GetFloat(SensitivityKey, 0.12f), 0.03f, 0.5f);
     }
 
-    /// <summary>이 캐릭터가 1인칭 시점의 주인공인지.</summary>
+    /// <summary>네트워크에서 내 아바타가 스폰되면 그쪽으로 시점을 옮긴다.</summary>
+    public static void SetSubject(Transform newSubject)
+    {
+        if (Instance == null)
+        {
+            return;
+        }
+
+        // 내 몸은 카메라 안에 있어서 화면을 가린다. 시점을 옮기면 이전 몸은 다시 보여야 한다.
+        SetBodyVisible(Instance.subject, true);
+        Instance.subject = newSubject;
+        Instance.subjectMotor = newSubject != null ? newSubject.GetComponent<PlayerMotor>() : null;
+        SetBodyVisible(newSubject, false);
+        if (newSubject != null)
+        {
+            Instance.yaw = newSubject.eulerAngles.y;
+        }
+    }
+
+    private static void SetBodyVisible(Transform body, bool visible)
+    {
+        if (body == null)
+        {
+            return;
+        }
+
+        CharacterVisual visual = body.GetComponent<CharacterVisual>();
+        if (visual != null)
+        {
+            visual.SetVisible(visible);
+        }
+
+        Renderer bodyRenderer = body.GetComponent<Renderer>();
+        if (bodyRenderer != null && visual == null)
+        {
+            bodyRenderer.enabled = visible;
+        }
+    }
+
+    /// <summary>이 캐릭터가 내가 보고 있는 몸인지. 남의 아바타는 시선을 따라가면 안 된다.</summary>
     public static bool IsSubject(Transform candidate)
     {
-        return Active && Instance != null && Instance.subject == candidate;
+        return Instance != null && Instance.subject == candidate;
     }
 
-    /// <summary>1인칭일 때는 이동 입력이 보는 방향 기준이 되어야 한다.</summary>
+    /// <summary>내가 조종하는 캐릭터. 조준 HUD 도 이 대상을 본다.</summary>
+    public static Transform Subject => Instance != null ? Instance.subject : null;
+
+    /// <summary>이동 입력은 화면이 아니라 보고 있는 방향 기준이다.</summary>
     public static Vector2 ToViewSpace(Vector2 input)
     {
-        if (!Active || Instance == null || input.sqrMagnitude < 0.0001f)
+        if (Instance == null || input.sqrMagnitude < 0.0001f)
         {
             return input;
         }
@@ -44,39 +95,41 @@ public sealed class FirstPersonView : MonoBehaviour
         return new Vector2(input.x * cos + input.y * sin, input.y * cos - input.x * sin);
     }
 
-    public void Toggle()
+    /// <summary>조준선이 나가는 광선. 흔들림이 섞인 카메라가 아니라 눈 위치에서 곧게 나간다.</summary>
+    public static Ray AimRay
     {
-        SetActive(!Active);
-    }
-
-    public void SetActive(bool active)
-    {
-        Active = active;
-        if (active)
+        get
         {
-            subject = PickSubject();
-            if (subject != null)
+            if (Instance == null || Instance.subject == null)
             {
-                yaw = subject.eulerAngles.y;
-                pitch = 8f;
+                return new Ray(Vector3.zero, Vector3.forward);
             }
-        }
 
-        ApplyCursor();
-        if (RestaurantGame.Instance != null)
-        {
-            RestaurantGame.Instance.ShowMessage(active ? "1인칭 시점 (V 로 되돌리기)" : "위에서 보는 시점");
+            return new Ray(
+                Instance.subject.position + Vector3.up * EyeHeight,
+                Quaternion.Euler(Instance.pitch, Instance.yaw, 0f) * Vector3.forward);
         }
     }
 
-    /// <summary>네트워크에서는 내가 조종하는 캐릭터, 로컬에서는 1번 플레이어.</summary>
-    private static Transform PickSubject()
+    /// <summary>사고가 났을 때 화면을 짧게 흔든다.</summary>
+    public void Shake(float duration, float strength)
     {
-        if (FollowPlayerCamera.Instance != null && FollowPlayerCamera.Instance.NetworkTarget != null)
-        {
-            return FollowPlayerCamera.Instance.NetworkTarget;
-        }
+        shakeTimer = duration;
+        shakeDuration = Mathf.Max(0.01f, duration);
+        shakeStrength = strength;
+    }
 
+    private void Start()
+    {
+        if (subject == null)
+        {
+            SetSubject(PickLocalSubject());
+        }
+    }
+
+    /// <summary>로컬 플레이는 혼자 하므로 등록된 첫 플레이어가 곧 나다.</summary>
+    private static Transform PickLocalSubject()
+    {
         foreach (PlayerInteraction player in WorldRegistry.Players)
         {
             if (player != null && player.gameObject.activeInHierarchy)
@@ -88,31 +141,11 @@ public sealed class FirstPersonView : MonoBehaviour
         return null;
     }
 
-    private void Start()
-    {
-        // -firstperson 으로 켜고 시작할 수 있다. 바로가기를 그렇게 만들어 두면 편하다.
-        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-firstperson") >= 0)
-        {
-            SetActive(true);
-        }
-    }
-
     private void Update()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.vKey.wasPressedThisFrame)
-        {
-            Toggle();
-        }
-
-        if (!Active)
-        {
-            return;
-        }
-
         if (subject == null)
         {
-            subject = PickSubject();
+            SetSubject(PickLocalSubject());
             if (subject == null)
             {
                 return;
@@ -120,41 +153,104 @@ public sealed class FirstPersonView : MonoBehaviour
         }
 
         bool playing = GameFlow.Instance == null || GameFlow.Instance.IsPlaying;
-        ApplyCursor();
+        ApplyCursor(playing);
         if (!playing)
         {
             return;
         }
 
+        ReadSensitivityKeys();
+
         Mouse mouse = Mouse.current;
         if (mouse != null)
         {
             Vector2 delta = mouse.delta.ReadValue();
-            yaw += delta.x * Sensitivity;
-            pitch = Mathf.Clamp(pitch - delta.y * Sensitivity, MinPitch, MaxPitch);
+            yaw += delta.x * sensitivity;
+            pitch = Mathf.Clamp(pitch - delta.y * sensitivity, MinPitch, MaxPitch);
         }
 
-        // 몸도 보는 방향을 따라간다. 상호작용은 정면을 보므로 이게 맞아야 한다.
+        Gamepad pad = Gamepad.current;
+        if (pad != null)
+        {
+            // 스틱은 프레임당 이동량이 아니라 속도라 시간을 곱해야 한다.
+            Vector2 look = pad.rightStick.ReadValue() * (260f * sensitivity * Time.unscaledDeltaTime);
+            yaw += look.x;
+            pitch = Mathf.Clamp(pitch - look.y, MinPitch, MaxPitch);
+        }
+
+        // 조준선이 곧 손이 닿는 곳이므로 몸도 늘 같은 곳을 본다.
         subject.rotation = Quaternion.Euler(0f, yaw, 0f);
+        UpdateBob();
     }
 
-    private void LateUpdate()
+    /// <summary>걷는 동안 시야가 위아래로 출렁인다. 멈추면 서서히 가라앉는다.</summary>
+    private void UpdateBob()
     {
-        if (!Active || subject == null)
+        float speed = subjectMotor != null ? subjectMotor.PlanarSpeed : 0f;
+        float target = Mathf.Clamp01(speed / 5f);
+        bobAmount = Mathf.MoveTowards(bobAmount, target, Time.deltaTime * 4f);
+        if (bobAmount > 0.001f)
+        {
+            bobPhase += Time.deltaTime * BobSpeed * Mathf.Max(0.35f, target);
+        }
+    }
+
+    /// <summary>마우스가 너무 빠르거나 느리면 게임을 멈추지 않고 바로 고칠 수 있어야 한다.</summary>
+    private void ReadSensitivityKeys()
+    {
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null)
         {
             return;
         }
 
-        transform.position = subject.position + Vector3.up * EyeHeight;
-        transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        int step = 0;
+        if (keyboard.leftBracketKey.wasPressedThisFrame) step = -1;
+        if (keyboard.rightBracketKey.wasPressedThisFrame) step = 1;
+        if (step == 0)
+        {
+            return;
+        }
+
+        sensitivity = Mathf.Clamp(sensitivity + step * 0.02f, 0.03f, 0.5f);
+        PlayerPrefs.SetFloat(SensitivityKey, sensitivity);
+        PlayerPrefs.Save();
+        if (RestaurantGame.Instance != null)
+        {
+            RestaurantGame.Instance.ShowMessage($"마우스 감도 {sensitivity:0.00}  ( [ 낮추기   ] 올리기 )");
+        }
     }
 
-    private void ApplyCursor()
+    private void LateUpdate()
     {
-        bool playing = GameFlow.Instance == null || GameFlow.Instance.IsPlaying;
-        bool locked = Active && playing;
-        Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
-        Cursor.visible = !locked;
+        if (subject == null)
+        {
+            return;
+        }
+
+        float bob = Mathf.Sin(bobPhase) * BobHeight * bobAmount;
+        float sway = Mathf.Cos(bobPhase * 0.5f) * BobSway * bobAmount;
+        Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
+
+        transform.rotation = rotation;
+        transform.position = subject.position
+                             + Vector3.up * (EyeHeight + bob)
+                             + rotation * Vector3.right * sway;
+
+        if (shakeTimer <= 0f)
+        {
+            return;
+        }
+
+        shakeTimer -= Time.unscaledDeltaTime;
+        float falloff = Mathf.Clamp01(shakeTimer / shakeDuration);
+        transform.position += rotation * new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0f) * (shakeStrength * falloff);
+    }
+
+    private void ApplyCursor(bool playing)
+    {
+        Cursor.lockState = playing ? CursorLockMode.Locked : CursorLockMode.None;
+        Cursor.visible = !playing;
     }
 
     private void OnDisable()

@@ -63,9 +63,9 @@ public static class GameEffects
 
     public static void Shake(float duration, float strength)
     {
-        if (FollowPlayerCamera.Instance != null)
+        if (FirstPersonView.Instance != null)
         {
-            FollowPlayerCamera.Instance.Shake(duration, strength);
+            FirstPersonView.Instance.Shake(duration, strength);
         }
     }
 }

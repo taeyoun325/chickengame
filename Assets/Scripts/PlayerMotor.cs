@@ -6,14 +6,19 @@ public sealed class PlayerMotor : MonoBehaviour
 {
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float gravity = -20f;
+    [SerializeField] private float jumpSpeed = 6.2f;
 
     private CharacterController characterController;
     private Vector2 input;
     private Vector3 slideVelocity;
     private float slipTimer;
     private float verticalVelocity;
+    private bool jumpQueued;
 
     public bool IsSlipping => slipTimer > 0f;
+
+    /// <summary>수평 이동 속력. 머리 흔들림과 발소리가 이 값을 본다.</summary>
+    public float PlanarSpeed { get; private set; }
 
     private void Awake()
     {
@@ -23,6 +28,23 @@ public sealed class PlayerMotor : MonoBehaviour
     public void SetInput(Vector2 moveInput)
     {
         input = Vector2.ClampMagnitude(moveInput, 1f);
+    }
+
+    /// <summary>미끄러지는 동안에는 점프로 빠져나갈 수 없다. 그게 사고의 값이다.</summary>
+    public void Jump()
+    {
+        if (slipTimer > 0f || !characterController.isGrounded)
+        {
+            return;
+        }
+
+        jumpQueued = true;
+
+        CharacterVisual visual = GetComponent<CharacterVisual>();
+        if (visual != null)
+        {
+            visual.PlayJump();
+        }
     }
 
     /// <summary>기름을 밟으면 잠시 조작을 잃고 미끄러진다.</summary>
@@ -64,9 +86,19 @@ public sealed class PlayerMotor : MonoBehaviour
             verticalVelocity = -2f;
         }
 
+        if (jumpQueued)
+        {
+            jumpQueued = false;
+            verticalVelocity = jumpSpeed;
+        }
+
         verticalVelocity += gravity * Time.deltaTime;
         Vector3 velocity = horizontal;
         velocity.y = verticalVelocity;
         characterController.Move(velocity * Time.deltaTime);
+
+        Vector3 travelled = characterController.velocity;
+        travelled.y = 0f;
+        PlanarSpeed = characterController.isGrounded ? travelled.magnitude : 0f;
     }
 }

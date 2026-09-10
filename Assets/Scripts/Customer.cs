@@ -16,6 +16,7 @@ public sealed class Customer : MonoBehaviour
     private Vector3 queueSlot;
     private Vector3 exitPoint;
     private Renderer bodyRenderer;
+    private CharacterVisual visual;
     private Color baseColor;
     private float bobTimer;
     private TextMesh tagMesh;
@@ -31,11 +32,34 @@ public sealed class Customer : MonoBehaviour
     public void ApplyMood(CustomerMood customerMood)
     {
         mood = customerMood ?? CustomerMood.Normal;
-        if (bodyRenderer != null && mood.kind != CustomerMoodKind.Normal)
+        if (mood.kind == CustomerMoodKind.Normal)
         {
-            baseColor = Color.Lerp(baseColor, mood.tint, 0.45f);
-            bodyRenderer.material.color = baseColor;
+            return;
         }
+
+        baseColor = Color.Lerp(baseColor, mood.tint, 0.45f);
+        Recolor(baseColor);
+    }
+
+    private void Recolor(Color color)
+    {
+        if (visual != null)
+        {
+            visual.Tint(color);
+        }
+        else if (bodyRenderer != null)
+        {
+            bodyRenderer.material.color = color;
+        }
+    }
+
+    private void Awake()
+    {
+        // Initialise 는 호스트에서만 불린다. 접속한 플레이어도 손님을 사람으로 봐야 하므로
+        // 모델은 여기서 붙이고, 색만 나중에 덧입힌다.
+        bodyRenderer = GetComponent<Renderer>();
+        baseColor = bodyRenderer != null ? bodyRenderer.material.color : Color.white;
+        visual = CharacterVisual.Attach(gameObject, baseColor, HatChoices[Random.Range(0, HatChoices.Length)]);
     }
 
     private void Start()
@@ -50,12 +74,11 @@ public sealed class Customer : MonoBehaviour
         queueSlot = slot;
         exitPoint = exit;
         baseColor = color;
-        bodyRenderer = GetComponent<Renderer>();
-        if (bodyRenderer != null)
-        {
-            bodyRenderer.material.color = color;
-        }
+        Recolor(color);
     }
+
+    /// <summary>줄에 선 손님들이 서로 구분되도록 모자를 섞어 씌운다.</summary>
+    private static readonly string[] HatChoices = { "party hat", "orange fedora", null };
 
     /// <summary>머리 위에 무엇을 기다리는지 띄운다.</summary>
     public string CurrentTag { get; private set; } = string.Empty;
@@ -89,7 +112,8 @@ public sealed class Customer : MonoBehaviour
             1f / Mathf.Max(0.01f, scale.x),
             1f / Mathf.Max(0.01f, scale.y),
             1f / Mathf.Max(0.01f, scale.z));
-        tagObject.transform.localPosition = new Vector3(0f, 1.35f, 0f);
+        // 모자 쓴 손님이 있으므로 머리보다 넉넉히 위여야 주문이 가려지지 않는다.
+        tagObject.transform.localPosition = new Vector3(0f, 1.85f, 0f);
 
         tagBaseScale = tagObject.transform.localScale;
 
@@ -100,18 +124,7 @@ public sealed class Customer : MonoBehaviour
         mesh.alignment = TextAlignment.Center;
         mesh.color = Color.white;
 
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                    ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-        if (font != null)
-        {
-            mesh.font = font;
-            MeshRenderer meshRenderer = tagObject.GetComponent<MeshRenderer>();
-            if (meshRenderer != null)
-            {
-                meshRenderer.sharedMaterial = font.material;
-            }
-        }
-
+        UiFont.Apply(mesh);
         return mesh;
     }
 
@@ -139,12 +152,12 @@ public sealed class Customer : MonoBehaviour
 
     private void ApplyPatienceColor(float normalized)
     {
-        if (bodyRenderer == null || state == CustomerState.Leaving)
+        if (state == CustomerState.Leaving)
         {
             return;
         }
 
-        bodyRenderer.material.color = Color.Lerp(new Color(0.85f, 0.15f, 0.1f), baseColor, Mathf.Clamp01(normalized));
+        Recolor(Color.Lerp(new Color(0.85f, 0.15f, 0.1f), baseColor, Mathf.Clamp01(normalized)));
     }
 
     private void LateUpdate()
@@ -187,13 +200,10 @@ public sealed class Customer : MonoBehaviour
 
         if (toTarget.sqrMagnitude > 0.04f)
         {
+            // 걷는 모습은 모델의 달리기 동작이 맡는다. 여기서 위아래로 튀기면 겹쳐서 어색하다.
             Vector3 step = toTarget.normalized * (WalkSpeed * mood.walkSpeedScale * Time.deltaTime);
             transform.position = flatPosition + Vector3.ClampMagnitude(step, toTarget.magnitude);
             transform.forward = Vector3.Slerp(transform.forward, toTarget.normalized, 10f * Time.deltaTime);
-            bobTimer += Time.deltaTime * 9f;
-            Vector3 bobbed = transform.position;
-            bobbed.y = target.y + Mathf.Abs(Mathf.Sin(bobTimer)) * 0.08f;
-            transform.position = bobbed;
             return;
         }
 

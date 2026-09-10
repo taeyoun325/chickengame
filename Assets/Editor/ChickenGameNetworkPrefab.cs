@@ -17,8 +17,7 @@ public static class ChickenGameNetworkPrefab
             AssetDatabase.CreateFolder("Assets", "Resources");
         }
 
-        GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        player.name = "NetworkPlayer";
+        GameObject player = GameMaterials.CreatePrimitive(PrimitiveType.Capsule, "NetworkPlayer", Color.white);
         player.transform.localScale = new Vector3(0.8f, 1.2f, 0.8f);
         Object.DestroyImmediate(player.GetComponent<Collider>());
 
@@ -56,8 +55,7 @@ public static class ChickenGameNetworkPrefab
     /// <summary>네트워크에서 공유되는 치킨.</summary>
     private static void BuildFoodPrefab()
     {
-        GameObject food = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        food.name = "NetworkFood";
+        GameObject food = GameMaterials.CreatePrimitive(PrimitiveType.Sphere, "NetworkFood", Color.white);
         food.transform.localScale = Vector3.one * 0.65f;
         food.AddComponent<FoodItem>();
         food.AddComponent<NetworkObject>();
@@ -71,8 +69,7 @@ public static class ChickenGameNetworkPrefab
     /// <summary>네트워크에서 공유되는 손님.</summary>
     private static void BuildCustomerPrefab()
     {
-        GameObject customer = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        customer.name = "NetworkCustomer";
+        GameObject customer = GameMaterials.CreatePrimitive(PrimitiveType.Capsule, "NetworkCustomer", Color.white);
         customer.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
         Object.DestroyImmediate(customer.GetComponent<Collider>());
         customer.AddComponent<Customer>();
@@ -87,8 +84,7 @@ public static class ChickenGameNetworkPrefab
     /// <summary>기름 웅덩이와 불. 위치만 공유하면 되므로 NetworkTransform 은 붙이지 않는다.</summary>
     private static void BuildHazardPrefab(string prefabName, PrimitiveType shape, bool addPuddle)
     {
-        GameObject hazard = GameObject.CreatePrimitive(shape);
-        hazard.name = prefabName;
+        GameObject hazard = GameMaterials.CreatePrimitive(shape, prefabName, Color.white);
         Object.DestroyImmediate(hazard.GetComponent<Collider>());
         hazard.AddComponent<NetworkObject>();
         if (addPuddle)
