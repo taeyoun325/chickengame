@@ -38,8 +38,17 @@ public sealed class FollowPlayerCamera : MonoBehaviour
         shakeStrength = strength;
     }
 
+    /// <summary>네트워크에서 내가 조종하는 캐릭터. 1인칭 시점이 이 대상을 따라간다.</summary>
+    public Transform NetworkTarget => target;
+
     private void LateUpdate()
     {
+        // 1인칭일 때는 그쪽이 카메라를 잡는다.
+        if (FirstPersonView.Active)
+        {
+            return;
+        }
+
         if (!TryGetFocus(out Vector3 focus, out float spread))
         {
             return;

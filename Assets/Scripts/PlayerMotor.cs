@@ -52,7 +52,8 @@ public sealed class PlayerMotor : MonoBehaviour
         {
             Vector3 movement = new Vector3(input.x, 0f, input.y);
             horizontal = movement * GameTuning.MoveSpeed(moveSpeed);
-            if (movement.sqrMagnitude > 0.001f)
+            // 1인칭에서는 카메라가 몸의 방향을 잡으므로 여기서 돌리지 않는다.
+            if (movement.sqrMagnitude > 0.001f && !FirstPersonView.IsSubject(transform))
             {
                 transform.forward = Vector3.Slerp(transform.forward, movement.normalized, 12f * Time.deltaTime);
             }

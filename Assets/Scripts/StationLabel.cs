@@ -5,7 +5,10 @@ public sealed class StationLabel : MonoBehaviour
 {
     private const float HintRange = 3.2f;
 
+    private const float ReferenceDistance = 15f;
+
     private TextMesh label;
+    private Vector3 baseScale = Vector3.one;
     private Transform camaraTransform;
     private Station station;
     private string title;
@@ -24,6 +27,7 @@ public sealed class StationLabel : MonoBehaviour
         labelObject.transform.position = station.transform.position + Vector3.up * height;
 
         StationLabel stationLabel = labelObject.AddComponent<StationLabel>();
+        stationLabel.baseScale = labelObject.transform.localScale;
         stationLabel.Initialise(station, title);
         return stationLabel;
     }
@@ -78,8 +82,9 @@ public sealed class StationLabel : MonoBehaviour
             camaraTransform = main.transform;
         }
 
-        // 라벨은 늘 카메라를 향한다.
+        // 라벨은 늘 카메라를 향하고, 거리와 무관하게 같은 크기로 보인다.
         transform.rotation = camaraTransform.rotation;
+        KeepApparentSize();
 
         PlayerInteraction nearest = NearestPlayer(out float distance);
         if (nearest == null || distance > HintRange)
@@ -91,6 +96,15 @@ public sealed class StationLabel : MonoBehaviour
 
         label.text = $"{title}\n{Hint(nearest)}";
         label.color = new Color(1f, 0.92f, 0.55f);
+    }
+
+    /// <summary>1인칭으로 가까이 가면 글자가 화면을 덮는다. 거리에 비례해 키워
+    /// 어느 시점에서나 같은 크기로 보이게 한다.</summary>
+    private void KeepApparentSize()
+    {
+        float distance = Vector3.Distance(camaraTransform.position, transform.position);
+        float factor = Mathf.Clamp(distance / ReferenceDistance, 0.18f, 1.3f);
+        transform.localScale = baseScale * factor;
     }
 
     /// <summary>손에 든 것과 스테이션 종류를 보고 다음에 할 일을 한 줄로 알려준다.</summary>

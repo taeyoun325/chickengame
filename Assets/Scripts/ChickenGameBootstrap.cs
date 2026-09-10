@@ -166,6 +166,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         camera.fieldOfView = 55f;
         cameraObject.AddComponent<AudioListener>();
         cameraObject.AddComponent<FollowPlayerCamera>();
+        cameraObject.AddComponent<FirstPersonView>();
     }
 
     private void BuildHud(RestaurantGame game, DeliverySystem delivery, UpgradeSystem upgradeSystem, RandomEventSystem eventSystem, GameFlow flow)
@@ -182,7 +183,7 @@ public sealed class ChickenGameBootstrap : MonoBehaviour
         Text revenue = CreateLabel(canvasObject.transform, "REVENUE  ₩0 / ₩10,000,000", new Vector2(24f, -24f), 26);
         Text day = CreateLabel(canvasObject.transform, "DAY 1   600s", new Vector2(-24f, -24f), 26);
         Text orders = CreateLabel(canvasObject.transform, "주문을 기다리는 중...", new Vector2(24f, -70f), 20);
-        Text instructions = CreateLabel(canvasObject.transform, "P1 WASD+E   P2 IJKL+O   패드 스틱+A   F/P 내려놓기   Q/U 소스\n냉장고 → 튀김기 → (양념대) → 포장대 → 계산대 / 배달대", new Vector2(24f, 24f), 18);
+        Text instructions = CreateLabel(canvasObject.transform, "P1 WASD+E   P2 IJKL+O   패드 스틱+A   F/P 내려놓기   Q/U 소스   V 1인칭\n냉장고 → 튀김기 → (양념대) → 포장대 → 계산대 / 배달대", new Vector2(24f, 24f), 18);
         Text message = CreateLabel(canvasObject.transform, string.Empty, new Vector2(0f, 90f), 24);
         Text stats = CreateLabel(canvasObject.transform, "주문 0  성공 0  실패 0  탄 치킨 0", new Vector2(-24f, -100f), 16);
         revenue.rectTransform.anchorMin = new Vector2(0f, 1f);

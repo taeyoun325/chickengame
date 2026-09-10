@@ -20,6 +20,7 @@ public sealed class Customer : MonoBehaviour
     private float bobTimer;
     private TextMesh tagMesh;
     private Transform cameraTransform;
+    private Vector3 tagBaseScale = Vector3.one;
 
     public CustomerState State => state;
 
@@ -89,6 +90,8 @@ public sealed class Customer : MonoBehaviour
             1f / Mathf.Max(0.01f, scale.y),
             1f / Mathf.Max(0.01f, scale.z));
         tagObject.transform.localPosition = new Vector3(0f, 1.35f, 0f);
+
+        tagBaseScale = tagObject.transform.localScale;
 
         TextMesh mesh = tagObject.AddComponent<TextMesh>();
         mesh.characterSize = 0.06f;
@@ -164,6 +167,10 @@ public sealed class Customer : MonoBehaviour
         }
 
         tagMesh.transform.rotation = cameraTransform.rotation;
+
+        // 스테이션 이름표와 같은 이유로, 가까이 가도 글자 크기가 유지되게 한다.
+        float distance = Vector3.Distance(cameraTransform.position, tagMesh.transform.position);
+        tagMesh.transform.localScale = tagBaseScale * Mathf.Clamp(distance / 15f, 0.2f, 1.3f);
     }
 
     private void Update()

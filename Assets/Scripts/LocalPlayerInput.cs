@@ -45,7 +45,13 @@ public sealed class LocalPlayerInput : MonoBehaviour
             return;
         }
 
-        motor.SetInput(ReadMove());
+        Vector2 move = ReadMove();
+        if (FirstPersonView.IsSubject(transform))
+        {
+            move = FirstPersonView.ToViewSpace(move);
+        }
+
+        motor.SetInput(move);
 
         if (interaction == null)
         {
