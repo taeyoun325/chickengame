@@ -99,8 +99,12 @@ public sealed class FoodItem : MonoBehaviour
         RefreshVisual();
     }
 
+    /// <summary>누군가 손에 들고 있는지. 임자가 있는 치킨을 옆 사람이 주워 가면 안 된다.</summary>
+    public bool IsHeld { get; private set; }
+
     public void SetHeld(bool held)
     {
+        IsHeld = held;
         Collider itemCollider = GetComponent<Collider>();
         if (itemCollider != null)
         {

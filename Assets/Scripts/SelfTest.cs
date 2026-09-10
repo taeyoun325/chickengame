@@ -39,6 +39,7 @@ public sealed class SelfTest : MonoBehaviour
         yield return TestOrderCheckout(game);
         yield return TestDelivery(game);
         TestUpgradeRules(game);
+        yield return TestSharedAccess(game);
         TestCleaning(game);
         TestClosureAndReopen(game);
         TestVictory(game);
@@ -187,6 +188,50 @@ public sealed class SelfTest : MonoBehaviour
         game.BuyUpgrade(0);
         bool affordable = revenue >= 120_000;
         Check(affordable || game.Revenue == revenue, "자금이 모자라면 결제되지 않는다");
+    }
+
+    /// <summary>여럿이 같은 것을 동시에 건드려도 중복 처리되면 안 된다.
+    ///
+    /// 협동 게임이라 두 사람이 같은 튀김기와 같은 치킨을 노리는 일이 계속 일어난다.
+    /// 남의 손에 든 치킨이 주워지거나 튀김기의 치킨이 절차 없이 빠져나가면
+    /// 조리 파이프라인 자체가 무의미해진다.</summary>
+    private IEnumerator TestSharedAccess(RestaurantGame game)
+    {
+        PlayerInteraction actor = WorldRegistry.Players.Count > 0 ? WorldRegistry.Players[0] : null;
+        Station fryer = FindStation(StationType.Fryer);
+        if (actor == null || fryer == null)
+        {
+            Check(false, "동시 접근을 시험할 플레이어와 튀김기가 있다");
+            yield break;
+        }
+
+        actor.DropEverything();
+
+        // 손에 든 치킨은 그 자리에서 다시 주워지면 안 된다.
+        game.InteractWithStation(actor, FindStation(StationType.Fridge));
+        FoodItem held = actor.HeldFood;
+        Check(held != null, "생닭을 들었다");
+        Check(WorldRegistry.NearestLooseFood(actor.transform.position, 3f) == null,
+            "손에 든 치킨은 주울 대상이 아니다");
+
+        // 튀김기에 올린 치킨도 스테이션 절차를 거쳐야 한다.
+        game.InteractWithStation(actor, fryer);
+        Check(fryer.StoredFood != null, "튀김기에 들어갔다");
+        Check(WorldRegistry.NearestLooseFood(fryer.transform.position, 3f) == null,
+            "튀김기의 치킨은 주울 대상이 아니다");
+
+        // 튀기는 중에는 아무도 꺼낼 수 없어야 한다.
+        game.InteractWithStation(actor, fryer);
+        Check(fryer.StoredFood != null && actor.HandsFree, "튀기는 중에는 꺼내지 못한다");
+
+        yield return new WaitForSeconds(6f);
+
+        // 한 번 꺼내면 자리가 비어야 두 번째 사람이 헛손질을 한다.
+        game.InteractWithStation(actor, fryer);
+        Check(fryer.StoredFood == null && actor.HeldFood != null, "익은 뒤 꺼내면 튀김기가 빈다");
+
+        game.InteractWithStation(actor, FindStation(StationType.Trash));
+        actor.DropEverything();
     }
 
     /// <summary>사고는 사람 손으로 수습할 수 있어야 한다. 기름을 저절로 마르기만

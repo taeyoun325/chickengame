@@ -67,6 +67,18 @@ public static class WorldRegistry
         players.Remove(player);
     }
 
+    /// <summary>바닥에 굴러다니는 치킨만 주울 수 있다.
+    ///
+    /// 임자가 있는 것은 빼야 한다. 남의 손에 든 것을 옆에서 뽑아 가거나,
+    /// 튀김기에 올려둔 것을 스테이션 절차를 건너뛰고 집어 가면 안 된다.</summary>
+    private static bool CanBePickedUp(FoodItem food)
+    {
+        return food != null
+               && food.state != FoodState.Frying
+               && !food.IsHeld
+               && food.RestingStation == null;
+    }
+
     /// <summary>반경 안에서 지금 쓰려는 스테이션을 고른다. 거리만 보면 두 스테이션
     /// 사이에 섰을 때 등 뒤의 것이 잡히므로, 바라보는 방향에 가산점을 준다.</summary>
     public static Station NearestStation(Vector3 position, float maxDistance, Vector3 facing = default)
@@ -116,7 +128,7 @@ public static class WorldRegistry
         for (int index = 0; index < foods.Count; index++)
         {
             FoodItem food = foods[index];
-            if (food == null || food.state == FoodState.Frying)
+            if (!CanBePickedUp(food))
             {
                 continue;
             }
